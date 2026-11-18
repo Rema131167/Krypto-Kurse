@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crypto Live-Kurs</title>
+<title>Crypto Live-Kurs v6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
@@ -104,6 +104,25 @@
   .chart-stats .pos { color: var(--up); } .chart-stats .neg { color: var(--down); }
   .chart-wrap { position: relative; height: 340px; }
   .chart-wrap canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; }
+  .chart-wrap.rsi { height: 470px; }
+  .opts { margin-top: 10px; }
+  #rsiBtn[aria-pressed="true"] { background: var(--btc); border-color: var(--btc); color: #1b1203; font-weight: 700; }
+  .sep { width: 1px; align-self: stretch; background: var(--glass-border); margin: 0 4px; }
+  .hint { margin: 8px 2px 0; font-size: .78rem; color: var(--muted); font-weight: 300; }
+  .hm-title { font-size: 1rem; font-weight: 700; }
+  .hm-sub { display: block; font-weight: 300; font-size: .78rem; color: var(--muted); margin-top: 2px; }
+  .liq-ctl { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .82rem; color: var(--muted); }
+  .liq-ctl .sel { margin-left: 4px; padding: 5px 12px; font-size: .82rem; }
+  .liq-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .78rem; color: var(--muted); margin-top: 12px; align-items: center; }
+  .liq-legend span { display: inline-flex; align-items: center; gap: 3px; }
+  .liq-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; }
+  .liq-legend b { color: var(--text); font-weight: 500; margin-right: 4px; }
+  .liq-wrap { position: relative; height: 320px; }
+  .liq-wrap canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; }
+  details.how { margin-top: 12px; font-size: .8rem; color: var(--muted); line-height: 1.55; }
+  details.how summary { cursor: pointer; color: var(--text); font-weight: 500; }
+  details.how summary:focus-visible { outline: 2px solid var(--btc); outline-offset: 2px; }
+  details.how p { margin-top: 8px; }
 
   /* Meldungen */
   #alerts { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 10; width: min(560px, calc(100% - 24px)); display: grid; gap: 10px; }
@@ -163,8 +182,35 @@
     .ladder { position: static; max-height: none; }
     .ladder-list { max-height: 420px; flex: none; }
   }
-  @media (max-width: 620px) { .sel { font-size: 16px; } .chart-wrap { height: 260px; } .grid { grid-template-columns: 1fr; } }
+  @media (max-width: 620px) { .sel { font-size: 16px; } .chart-wrap { height: 260px; } .chart-wrap.rsi { height: 380px; } .liq-wrap { height: 260px; } .grid { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  /* v4: Kopfzeile, Fear & Greed, Live-Liquidationen */
+  .headrow { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-start; justify-content: space-between; }
+  .headrow h1 { flex: 1 1 260px; }
+  .fng { flex: 0 0 auto; margin-left: auto; min-width: 190px; text-align: left; padding: 10px 14px 9px; border-radius: 20px;
+    background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .fng-t { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .fng-main { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+  .fng-v { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .fng-l { font-size: .9rem; font-weight: 500; }
+  .fng-bar { position: relative; height: 8px; border-radius: 99px; margin: 9px 0 6px;
+    background: linear-gradient(90deg, #ea3943 0%, #ea8c00 25%, #f3d42f 50%, #93d900 75%, #16c784 100%); }
+  .fng-bar i { position: absolute; top: -3px; width: 4px; height: 14px; border-radius: 3px; background: #fff; box-shadow: 0 0 0 2px rgba(10,15,40,.7); transform: translateX(-50%); left: 50%; }
+  .fng-s { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .fng-s b { color: var(--text); font-weight: 500; }
+  .fng-src { font-size: .66rem; color: var(--muted); margin-top: 3px; }
+  .fng-src a { color: var(--muted); }
+  .lv-status { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .78rem; color: var(--muted); margin-top: 12px; }
+  .lv-status .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; background: #777; }
+  .lv-status .ok .dot { background: var(--up); } .lv-status .wait .dot { background: #f3d42f; } .lv-status .bad .dot { background: var(--down); }
+  .lv-list { margin-top: 10px; font-size: .78rem; font-variant-numeric: tabular-nums; color: var(--muted); display: grid; gap: 3px; }
+  .lv-list div { display: flex; gap: 10px; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.05); padding: 2px 0; }
+  .lv-list .l { color: var(--down); } .lv-list .s { color: var(--up); }
+  .lv-links { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .lv-links a { font-size: .82rem; color: var(--text); text-decoration: none; border: 1px solid var(--glass-border); border-radius: 999px; padding: 7px 14px; }
+  .lv-links a:hover { border-color: var(--btc); }
+  .lv-wrap { position: relative; height: 260px; margin-top: 10px; }
+  .lv-wrap canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; }
 </style>
 </head>
 <body>
@@ -174,7 +220,16 @@
 
 <div class="layout">
 <main>
-  <h1><img class="coinLogo big" alt="" hidden><span>Crypto Live-Kurs</span></h1>
+  <div class="headrow">
+    <h1><img class="coinLogo big" alt="" hidden><span>Crypto Live-Kurs</span></h1>
+    <aside class="fng" id="fng" aria-label="Fear-and-Greed-Index">
+      <div class="fng-t">Fear &amp; Greed Index</div>
+      <div class="fng-main"><span class="fng-v" id="fngV">–</span><span class="fng-l" id="fngL">Lade …</span></div>
+      <div class="fng-bar" aria-hidden="true"><i id="fngPin"></i></div>
+      <div class="fng-s" id="fngS"></div>
+      <div class="fng-src">Quelle: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · gilt für den Krypto-Markt, nicht für einen einzelnen Coin</div>
+    </aside>
+  </div>
 
   <form class="row" id="coinForm" autocomplete="off">
     <label for="coinIn">Coin (Börsenkürzel)</label>
@@ -251,8 +306,17 @@
         <button type="button" data-cur="usd">USD</button>
       </div>
     </div>
+    <div class="chart-top opts">
+      <div class="cur-switch" id="typeSwitch" role="group" aria-label="Darstellung">
+        <button type="button" data-type="line" class="on" title="Liniendiagramm">Linie</button>
+        <button type="button" data-type="candle" title="Kerzendiagramm (Eröffnung, Hoch, Tief, Schluss)">Kerzen</button>
+        <span class="sep"></span>
+        <button type="button" id="rsiBtn" aria-pressed="false" title="Relative-Stärke-Index (14) unter dem Chart ein- oder ausblenden">RSI</button>
+      </div>
+    </div>
     <div class="chart-stats" id="chartStats">Lade Chart …</div>
     <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <p class="hint" id="rsiHint" hidden>RSI (14): Werte über 70 gelten als überkauft, Werte unter 30 als überverkauft. Er ist ein Hilfsmittel und keine Kaufempfehlung.</p>
   </section>
 
   <p class="status" id="status">Lade Kurs …</p>
@@ -490,18 +554,22 @@
 
   /* ---------- Chart ---------- */
   const TFS = [
-    { label: "1 Min",  base: 1,    group: 1 },
-    { label: "5 Min",  base: 5,    group: 1 },
-    { label: "10 Min", base: 5,    group: 2 },
-    { label: "30 Min", base: 30,   group: 1 },
-    { label: "60 Min", base: 60,   group: 1 },
-    { label: "4 Std",  base: 240,  group: 1 },
-    { label: "Tag",    base: 1440, group: 1 }
+    { label: "1 Min",  base: 1,    group: 1, n: 100 },
+    { label: "5 Min",  base: 5,    group: 1, n: 100 },
+    { label: "10 Min", base: 5,    group: 2, n: 100 },
+    { label: "30 Min", base: 30,   group: 1, n: 100 },
+    { label: "60 Min", base: 60,   group: 1, n: 100 },
+    { label: "4 Std",  base: 240,  group: 1, n: 100 },
+    { label: "Tag",    base: 1440, group: 1, n: 100 },
+    { label: "Monat",  base: 240,  group: 1, n: 180, dateOnly: true },   // ca. 30 Tage in 4-Stunden-Kerzen
+    { label: "Jahr",   base: 1440, group: 1, n: 365 }                    // 365 Tageskerzen
   ];
-  const MAX_POINTS = 100;
-  let tf = TFS[1], chartCur = "eur", candles = [], liveClose = null, chartMsg = "Lade Chart …", hover = null, loadToken = 0;
+  let tf = TFS[1], chartCur = "eur", allCandles = [], candles = [], liveClose = null, chartMsg = "Lade Chart …", hover = null, loadToken = 0;
+  let chartType = "line", rsiOn = false;
+  try { chartType = localStorage.getItem("cryptoChartType") === "candle" ? "candle" : "line"; rsiOn = localStorage.getItem("cryptoRsi") === "1"; } catch (e) {}
   const canvas = $("chart"), ctx = canvas.getContext("2d");
   const pct = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2, signDisplay: "exceptZero" });
+  const PAD = { L: 8, R: 92, T: 12, B: 26 };
 
   async function loadKraken(sym, cur, base) {
     const j = await getJSON("https://api.kraken.com/0/public/OHLC?pair=" + (KRAKEN_ALIAS[sym] || sym) + cur.toUpperCase() + "&interval=" + base + "&_=" + Date.now());
@@ -530,7 +598,8 @@
         if (cfg.group > 1) data = aggregate(data, cfg.base * cfg.group * 60000);
         if (token !== loadToken) return;
         if (data.length < 2) throw new Error("zu wenige Daten");
-        candles = data.slice(-MAX_POINTS);
+        allCandles = data;                          // alle geladenen Kerzen (für den RSI-Vorlauf)
+        candles = data.slice(-cfg.n);               // sichtbarer Ausschnitt
         liveClose = last[cur] !== undefined ? last[cur] : null;
         chartMsg = null;
         drawChart();
@@ -538,7 +607,7 @@
       } catch (e) { errs.push(fn.name.replace("load", "") + ": " + e.message); }
     }
     if (token !== loadToken) return;
-    candles = [];
+    allCandles = []; candles = [];
     chartMsg = "Chart für " + sym + " konnte nicht geladen werden (" + errs.join(" | ") + ")";
     drawChart();
   }
@@ -546,11 +615,34 @@
     const d = new Date(ts);
     if (tf.base >= 1440) return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
     const t = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-    return (withDate || tf.base >= 240) ? d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " " + t : t;
+    const dm = d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+    if (tf.dateOnly) return withDate ? dm + " " + t : dm;
+    return (withDate || tf.base >= 240) ? dm + " " + t : t;
   }
   function chartDigits(range, v) {
     if (!(range > 0)) return digitsFor(v);
     return Math.max(0, Math.min(8, Math.ceil(3 - Math.log10(range))));
+  }
+  // RSI nach Wilder (Glättung über 14 Perioden); null, solange zu wenige Werte da sind
+  function rsiSeries(closes, period) {
+    const out = new Array(closes.length).fill(null);
+    if (closes.length <= period) return out;
+    let g = 0, l = 0;
+    for (let i = 1; i <= period; i++) { const d = closes[i] - closes[i - 1]; if (d >= 0) g += d; else l -= d; }
+    let ag = g / period, al = l / period;
+    out[period] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+    for (let i = period + 1; i < closes.length; i++) {
+      const d = closes[i] - closes[i - 1];
+      ag = (ag * (period - 1) + (d > 0 ? d : 0)) / period;
+      al = (al * (period - 1) + (d < 0 ? -d : 0)) / period;
+      out[i] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+    }
+    return out;
+  }
+  function geom(W, n) {
+    const pw = W - PAD.L - PAD.R;
+    const inset = chartType === "candle" ? Math.max(2, pw / Math.max(n, 1) * 0.35) : 0;
+    return { pw, inset };
   }
 
   function drawChart() {
@@ -571,72 +663,132 @@
       stats.textContent = chartMsg || "";
       return;
     }
-    const pts = candles.map(c => ({ t: c.t, v: c.c }));
-    if (liveClose != null) pts[pts.length - 1].v = liveClose;
-    const vals = pts.map(p => p.v);
-    let lo = Math.min(...candles.map(c => c.l), ...vals), hi = Math.max(...candles.map(c => c.h), ...vals);
+    const n = candles.length;
+    const cs = candles.map(c => ({ t: c.t, o: c.o, h: c.h, l: c.l, c: c.c }));
+    if (liveClose != null) { const k = cs[n - 1]; k.c = liveClose; k.h = Math.max(k.h, liveClose); k.l = Math.min(k.l, liveClose); }
+
+    let rsi = null;
+    if (rsiOn) {
+      const closes = allCandles.map(c => c.c);
+      if (liveClose != null && closes.length) closes[closes.length - 1] = liveClose;
+      rsi = rsiSeries(closes, 14).slice(-n);
+    }
+
+    let lo = Math.min(...cs.map(c => c.l)), hi = Math.max(...cs.map(c => c.h));
     const pad = (hi - lo) * 0.08 || hi * 0.001;
     lo -= pad; hi += pad;
-    const digits = chartDigits(hi - lo, vals[vals.length - 1]);
+    const digits = chartDigits(hi - lo, cs[n - 1].c);
     const fp = v => money(chartCur, v, digits);
 
-    const L = 8, R = 92, T = 12, B = 26, pw = W - L - R, ph = H - T - B;
-    const x = i => L + (pts.length === 1 ? 0 : i / (pts.length - 1)) * pw;
+    const { L, R, T, B } = PAD, { pw, inset } = geom(W, n);
+    const rsiH = rsiOn ? Math.round((H - T - B) * 0.27) : 0, gap = rsiOn ? 16 : 0;
+    const ph = H - T - B - rsiH - gap;
+    const x = i => L + inset + (n < 2 ? 0 : i / (n - 1)) * (pw - 2 * inset);
     const y = v => T + (1 - (v - lo) / (hi - lo)) * ph;
+    const bottom = rsiOn ? T + ph + gap + rsiH : T + ph;
 
+    // Raster und Preisachse
     ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.fillStyle = "#9aa8d6"; ctx.lineWidth = 1; ctx.textAlign = "left";
     for (let k = 0; k <= 4; k++) {
       const v = lo + (hi - lo) * k / 4, yy = Math.round(y(v)) + .5;
       ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke();
       ctx.fillText(fp(v), L + pw + 8, yy + 4);
     }
+    // Zeitachse
     for (let k = 0; k < 5; k++) {
-      const i = Math.round(k * (pts.length - 1) / 4);
+      const i = Math.round(k * (n - 1) / 4);
       ctx.textAlign = k === 0 ? "left" : k === 4 ? "right" : "center";
-      ctx.fillText(fmtTime(pts[i].t), x(i), H - 8);
+      ctx.fillText(fmtTime(cs[i].t), x(i), H - 8);
     }
-    const grad = ctx.createLinearGradient(0, T, 0, T + ph);
-    grad.addColorStop(0, accentA(.38)); grad.addColorStop(1, accentA(0));
-    ctx.beginPath();
-    pts.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.v)) : ctx.moveTo(x(i), y(p.v)));
-    ctx.lineTo(x(pts.length - 1), T + ph); ctx.lineTo(x(0), T + ph); ctx.closePath();
-    ctx.fillStyle = grad; ctx.fill();
-    ctx.beginPath();
-    pts.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.v)) : ctx.moveTo(x(i), y(p.v)));
-    ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
 
-    const lastV = pts[pts.length - 1].v, ly = y(lastV);
+    if (chartType === "candle") {
+      const cw = Math.max(1, (pw / n) * 0.7);
+      cs.forEach((k, i) => {
+        const col = k.c >= k.o ? "#46d9a0" : "#ff6b7a", xx = x(i);
+        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(Math.round(xx) + .5, y(k.h)); ctx.lineTo(Math.round(xx) + .5, y(k.l)); ctx.stroke();
+        ctx.fillRect(xx - cw / 2, y(Math.max(k.o, k.c)), cw, Math.max(1, Math.abs(y(k.o) - y(k.c))));
+      });
+    } else {
+      const grad = ctx.createLinearGradient(0, T, 0, T + ph);
+      grad.addColorStop(0, accentA(.38)); grad.addColorStop(1, accentA(0));
+      ctx.beginPath();
+      cs.forEach((k, i) => i ? ctx.lineTo(x(i), y(k.c)) : ctx.moveTo(x(i), y(k.c)));
+      ctx.lineTo(x(n - 1), T + ph); ctx.lineTo(x(0), T + ph); ctx.closePath();
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.beginPath();
+      cs.forEach((k, i) => i ? ctx.lineTo(x(i), y(k.c)) : ctx.moveTo(x(i), y(k.c)));
+      ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+    }
+
+    // Aktueller Preis
+    const lastV = cs[n - 1].c, ly = y(lastV);
     ctx.setLineDash([4, 4]); ctx.strokeStyle = accentA(.6); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(L, ly); ctx.lineTo(L + pw, ly); ctx.stroke(); ctx.setLineDash([]);
     const label = fp(lastV), lw = ctx.measureText(label).width + 12;
     ctx.fillStyle = accent; ctx.fillRect(L + pw + 2, ly - 10, Math.min(lw, R - 2), 20);
     ctx.fillStyle = "#1b1203"; ctx.textAlign = "left"; ctx.fillText(label, L + pw + 8, ly + 4);
 
+    // RSI-Fenster
+    if (rsiOn) {
+      const r0 = T + ph + gap, r1 = r0 + rsiH, ry = v => r1 - (v / 100) * rsiH;
+      ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fillRect(L, ry(70), pw, ry(30) - ry(70));
+      ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      [30, 70].forEach(v => { ctx.beginPath(); ctx.moveTo(L, Math.round(ry(v)) + .5); ctx.lineTo(L + pw, Math.round(ry(v)) + .5); ctx.stroke(); });
+      ctx.setLineDash([]);
+      ctx.strokeStyle = "rgba(255,255,255,.18)"; ctx.strokeRect(L + .5, r0 + .5, pw - 1, rsiH - 1);
+      ctx.fillStyle = "#9aa8d6"; ctx.textAlign = "left";
+      ctx.fillText("70", L + pw + 8, ry(70) + 4); ctx.fillText("30", L + pw + 8, ry(30) + 4);
+      ctx.fillText("RSI (14)", L + 8, r0 + 14);
+      ctx.beginPath();
+      let started = false;
+      rsi.forEach((v, i) => { if (v == null) return; if (!started) { ctx.moveTo(x(i), ry(v)); started = true; } else ctx.lineTo(x(i), ry(v)); });
+      ctx.strokeStyle = "#8fb4ff"; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.stroke();
+      const lr = rsi[n - 1];
+      if (lr != null) {
+        ctx.fillStyle = "#8fb4ff"; ctx.beginPath(); ctx.arc(x(n - 1), ry(lr), 3, 0, 7); ctx.fill();
+      }
+    }
+
+    // Maus / Touch
     if (hover != null) {
-      const i = Math.max(0, Math.min(pts.length - 1, hover)), px = x(i), py = y(pts[i].v);
-      ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.moveTo(px, T); ctx.lineTo(px, T + ph); ctx.stroke(); ctx.setLineDash([]);
+      const i = Math.max(0, Math.min(n - 1, hover)), px = x(i), k = cs[i], py = y(k.c);
+      ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(px, T); ctx.lineTo(px, bottom); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.fill();
-      const l1 = fp(pts[i].v), l2 = fmtTime(pts[i].t, true);
-      const bw = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 20, bh = 42;
+      const lines = chartType === "candle"
+        ? ["Eröffnung " + fp(k.o), "Hoch " + fp(k.h), "Tief " + fp(k.l), "Schluss " + fp(k.c)]
+        : [fp(k.c)];
+      if (rsiOn && rsi[i] != null) lines.push("RSI " + rsi[i].toFixed(1).replace(".", ","));
+      lines.push(fmtTime(k.t, true));
+      const lh = 15, bh = lines.length * lh + 12;
+      const bw = Math.max(...lines.map(s => ctx.measureText(s).width)) + 20;
       let bx = px + 12; if (bx + bw > L + pw) bx = px - 12 - bw;
       const by = Math.max(T, Math.min(py - bh / 2, T + ph - bh));
       ctx.fillStyle = "rgba(15,27,61,.95)"; ctx.strokeStyle = "rgba(255,255,255,.2)";
       ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 8) : ctx.rect(bx, by, bw, bh)); ctx.fill(); ctx.stroke();
-      ctx.textAlign = "left"; ctx.fillStyle = "#f4f6ff"; ctx.fillText(l1, bx + 10, by + 17);
-      ctx.fillStyle = "#9aa8d6"; ctx.fillText(l2, bx + 10, by + 33);
+      ctx.textAlign = "left";
+      lines.forEach((s, j) => { ctx.fillStyle = j === lines.length - 1 ? "#9aa8d6" : "#f4f6ff"; ctx.fillText(s, bx + 10, by + 18 + j * lh); });
     }
-    const chg = (lastV / pts[0].v - 1) * 100;
-    const hiC = Math.max(...candles.map(c => c.h), lastV), loC = Math.min(...candles.map(c => c.l), lastV);
-    stats.innerHTML = "Hoch <b>" + fp(hiC) + "</b> Tief <b>" + fp(loC) + "</b> " +
-      "Verlauf (" + pts.length + " Kerzen) <b class=\"" + (chg >= 0 ? "pos" : "neg") + "\">" + pct.format(chg) + " %</b>";
+
+    // Kennzahlen
+    const chg = (lastV / cs[0].c - 1) * 100;
+    const hiC = Math.max(...cs.map(c => c.h)), loC = Math.min(...cs.map(c => c.l));
+    let html = "Hoch <b>" + fp(hiC) + "</b> Tief <b>" + fp(loC) + "</b> " +
+      "Verlauf (" + n + " Kerzen) <b class=\"" + (chg >= 0 ? "pos" : "neg") + "\">" + pct.format(chg) + " %</b>";
+    if (rsiOn && rsi[n - 1] != null) {
+      const v = rsi[n - 1], zone = v > 70 ? "überkauft" : v < 30 ? "überverkauft" : "neutral";
+      html += " RSI (14) <b class=\"" + (v > 70 ? "neg" : v < 30 ? "pos" : "") + "\">" + v.toFixed(1).replace(".", ",") + " " + zone + "</b>";
+    }
+    stats.innerHTML = html;
   }
 
   function pointer(e) {
     if (!candles.length) return;
     const r = canvas.getBoundingClientRect(), cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-    const pw = r.width - 8 - 92;
-    hover = Math.round((cx - 8) / pw * (candles.length - 1));
+    const n = candles.length, g = geom(r.width, n), span = g.pw - 2 * g.inset;
+    hover = n < 2 ? 0 : Math.round((cx - PAD.L - g.inset) / span * (n - 1));
+    hover = Math.max(0, Math.min(n - 1, hover));
     drawChart();
   }
   canvas.addEventListener("mousemove", pointer);
@@ -661,6 +813,44 @@
     candles = []; chartMsg = "Lade Chart …"; drawChart(); loadChart();
   });
   setInterval(loadChart, 30000);
+
+  /* ---------- Darstellung (Linie / Kerzen) und RSI ---------- */
+  const wrapEl = document.querySelector(".chart-wrap");
+  function applyChartOpts() {
+    wrapEl.classList.toggle("rsi", rsiOn);
+    document.querySelectorAll("#typeSwitch button[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === chartType));
+    const rb = $("rsiBtn");
+    rb.setAttribute("aria-pressed", String(rsiOn));
+    $("rsiHint").hidden = !rsiOn;
+    try { localStorage.setItem("cryptoChartType", chartType); localStorage.setItem("cryptoRsi", rsiOn ? "1" : "0"); } catch (e) {}
+    drawChart();
+  }
+  document.querySelectorAll("#typeSwitch button[data-type]").forEach(b => b.onclick = () => { chartType = b.dataset.type; applyChartOpts(); });
+  $("rsiBtn").onclick = () => { rsiOn = !rsiOn; applyChartOpts(); };
+  applyChartOpts();
+
+  /* ---------- Fear & Greed Index (alternative.me) ---------- */
+  const FNG_DE = { "Extreme Fear": "Extreme Angst", "Fear": "Angst", "Neutral": "Neutral", "Greed": "Gier", "Extreme Greed": "Extreme Gier" };
+  function fngColor(v) { return v < 25 ? "#ea3943" : v < 45 ? "#ea8c00" : v <= 55 ? "#f3d42f" : v < 75 ? "#93d900" : "#16c784"; }
+  function fngLabel(v) { return v < 25 ? "Extreme Angst" : v < 45 ? "Angst" : v <= 55 ? "Neutral" : v < 75 ? "Gier" : "Extreme Gier"; }
+  async function loadFng() {
+    try {
+      const j = await getJSON("https://api.alternative.me/fng/?limit=8");
+      const d = (j && j.data || []).map(x => ({ v: Number(x.value), c: x.value_classification, t: Number(x.timestamp) })).filter(x => isFinite(x.v));
+      if (!d.length) throw new Error("leer");
+      const now = d[0];
+      $("fngV").textContent = String(now.v); $("fngV").style.color = fngColor(now.v);
+      $("fngL").textContent = FNG_DE[now.c] || fngLabel(now.v); $("fngL").style.color = fngColor(now.v);
+      $("fngPin").style.left = Math.max(0, Math.min(100, now.v)) + "%";
+      const parts = [];
+      if (d[1]) parts.push("Gestern <b>" + d[1].v + "</b>");
+      if (d[7]) parts.push("Vor 1 Woche <b>" + d[7].v + "</b>");
+      $("fngS").innerHTML = parts.join(" · ");
+    } catch (e) {
+      $("fngV").textContent = "–"; $("fngV").style.color = ""; $("fngL").textContent = "nicht erreichbar"; $("fngS").textContent = "";
+    }
+  }
+  loadFng(); setInterval(loadFng, 30 * 60 * 1000);
 
   /* ---------- Coin-Logo (Hintergrund, Überschrift, Karten) ---------- */
   const LOGO_SRCS = [
