@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crypto Live-Kurs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #0f1b3d;
+    --bg2: #1d2f6b;
+    --btc: #f7931a;           /* Akzentfarbe, wird pro Coin gesetzt */
+    --text: #f4f6ff;
+    --muted: #9aa8d6;
+    --up: #46d9a0;
+    --down: #ff6b7a;
+    --glass: rgba(255,255,255,.07);
+    --glass-border: rgba(255,255,255,.14);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text);
+    background: radial-gradient(circle at 20% 10%, var(--bg2), var(--bg1) 60%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; min-height: 100vh; overflow-x: hidden; position: relative;
+  }
+  .watermark {
+    position: fixed; width: min(95vmin, 900px); aspect-ratio: 1;
+    left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-8deg);
+    opacity: .13; pointer-events: none; z-index: 0;
+  }
+  .watermark svg, .watermark img { width: 100%; height: 100%; display: block; }
+  main { position: relative; z-index: 1; flex: 1 1 0; min-width: 0; max-width: 960px; text-align: center; }
+  .layout { position: relative; z-index: 1; display: flex; gap: 20px; align-items: flex-start; justify-content: center; width: 100%; max-width: 1300px; }
+  h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .coinLogo { width: 28px; height: 28px; border-radius: 50%; vertical-align: middle; margin-right: 8px; object-fit: contain; }
+  .coinLogo.big { width: clamp(36px, 6vw, 52px); height: clamp(36px, 6vw, 52px); margin-right: 0; }
+  .coinLogo[hidden] { display: none; }
+  .sub { color: var(--muted); font-weight: 300; margin-top: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; color: var(--muted); font-weight: 300; font-size: .9rem; margin-top: 12px; }
+  .sel {
+    font: inherit; font-size: .9rem; color: var(--text); cursor: pointer;
+    background: #1d2f6b; border: 1px solid var(--glass-border); border-radius: 999px;
+    padding: 6px 14px; margin-left: 6px;
+  }
+  .sel:focus-visible, .chip:focus-visible, .btn:focus-visible { outline: 2px solid var(--btc); outline-offset: 2px; }
+  .sel option { background: #1d2f6b; color: #f4f6ff; }
+  .sel.num { width: 104px; cursor: text; }
+  .sel.coin { width: 130px; cursor: text; text-align: center; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-left: 0; }
+  .custom { display: inline-flex; align-items: center; gap: 6px; }
+  .custom[hidden] { display: none; }
+  .btn {
+    font: inherit; font-size: .88rem; font-weight: 700; color: #1b1203; background: var(--btc);
+    border: 0; border-radius: 999px; padding: 8px 18px; cursor: pointer;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px; }
+  .chip {
+    font: inherit; font-size: .8rem; color: var(--muted); background: transparent;
+    border: 1px solid var(--glass-border); border-radius: 999px; padding: 5px 12px; cursor: pointer;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.on { background: var(--btc); border-color: var(--btc); color: #1b1203; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 28px; }
+  .card {
+    background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: 28px; padding: 32px 20px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(5,10,35,.45);
+  }
+  .cur { color: var(--btc); font-weight: 500; font-size: 1rem; }
+  .price {
+    font-size: clamp(1.7rem, 5vw, 3.2rem); font-weight: 700; margin: 12px 0 4px;
+    font-variant-numeric: tabular-nums; transition: color .4s; overflow-wrap: anywhere;
+  }
+  .price.up { color: var(--up); }
+  .price.down { color: var(--down); }
+  .status { margin-top: 28px; color: var(--muted); font-size: .9rem; font-weight: 300; overflow-wrap: anywhere; }
+  .bar { height: 4px; width: min(320px, 70%); margin: 14px auto 0; background: var(--glass); border-radius: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 100%; background: var(--btc); transform-origin: left; }
+  .err { color: var(--down); }
+  .ref { margin-top: 10px; color: var(--muted); font-size: .8rem; font-weight: 300; }
+
+  /* Chart */
+  .chart-card {
+    margin-top: 20px; text-align: left; padding: 20px;
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 28px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(5,10,35,.45);
+  }
+  .chart-top { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+  .tabs, .cur-switch { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tabs button, .cur-switch button {
+    font: inherit; font-size: .82rem; color: var(--muted); background: transparent;
+    border: 1px solid var(--glass-border); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  }
+  .tabs button:hover, .cur-switch button:hover { color: var(--text); }
+  .tabs button.on, .cur-switch button.on { background: var(--btc); border-color: var(--btc); color: #1b1203; font-weight: 700; }
+  .tabs button:focus-visible, .cur-switch button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .chart-stats { margin: 16px 2px 8px; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: .88rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chart-stats b { color: var(--text); font-weight: 500; }
+  .chart-stats .pos { color: var(--up); } .chart-stats .neg { color: var(--down); }
+  .chart-wrap { position: relative; height: 340px; }
+  .chart-wrap canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; }
+
+  /* Meldungen */
+  #alerts { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 10; width: min(560px, calc(100% - 24px)); display: grid; gap: 10px; }
+  .alert {
+    display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; text-align: left;
+    background: #d92d3f; color: #fff; border: 1px solid rgba(255,255,255,.35);
+    border-radius: 16px; padding: 14px 16px; box-shadow: 0 12px 40px rgba(217,45,63,.55);
+    animation: pop .35s ease-out;
+  }
+  .alert.rise { background: #14a36b; box-shadow: 0 12px 40px rgba(20,163,107,.55); }
+  .alert strong { display: block; font-size: 1rem; }
+  .alert span { font-size: .88rem; opacity: .92; }
+  .alert button { font: inherit; background: rgba(255,255,255,.2); color: #fff; border: 0; border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+  .alert button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* Kurs-Matrix */
+  .ladder {
+    position: sticky; top: 20px; flex: none; width: 300px; max-height: calc(100vh - 48px);
+    display: flex; flex-direction: column; text-align: left; padding: 20px 14px 14px;
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 28px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(5,10,35,.45);
+  }
+  .ladder-title { display: flex; align-items: center; gap: 8px; padding: 0 6px 10px; }
+  .ladder-title h2 { font-size: 1rem; font-weight: 700; }
+  .ladder .tabs { padding: 0 6px; }
+  .info { position: relative; display: inline-flex; }
+  .info-btn {
+    font: inherit; font-size: .75rem; font-weight: 700; line-height: 1; padding: 0; width: 22px; height: 22px;
+    border-radius: 50%; border: 1px solid var(--glass-border); background: transparent; color: var(--muted); cursor: help;
+  }
+  .info-btn:hover, .info-btn:focus-visible { color: #1b1203; background: var(--btc); border-color: var(--btc); outline: none; }
+  .tip {
+    display: none; position: absolute; left: -8px; top: 32px; width: 268px; z-index: 20;
+    background: #12204f; border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 12px 14px;
+    font-size: .78rem; font-weight: 300; line-height: 1.5; color: var(--text); text-align: left;
+    box-shadow: 0 12px 40px rgba(5,10,35,.6);
+  }
+  .tip b { font-weight: 700; }
+  .info:hover .tip, .info:focus-within .tip, .info.open .tip { display: block; }
+  .lad-head, .lad-row { display: grid; grid-template-columns: 58px 1fr 1fr; gap: 6px; padding: 6px 8px; font-variant-numeric: tabular-nums; }
+  .lad-head { margin-top: 12px; color: var(--muted); font-size: .72rem; border-bottom: 1px solid var(--glass-border); }
+  .lad-head span:nth-child(n+2), .lad-row span:nth-child(n+2) { text-align: right; }
+  .ladder-list { position: relative; overflow-y: auto; flex: 1 1 auto; min-height: 0; margin-top: 4px; }
+  .lad-row { font-size: .8rem; border-radius: 8px; }
+  .lad-row .d { color: var(--muted); font-size: .7rem; align-self: center; overflow: hidden; text-overflow: ellipsis; }
+  .lad-row.up { background: rgba(70,217,160,.06); } .lad-row.up .d { color: var(--up); }
+  .lad-row.down { background: rgba(255,107,122,.06); } .lad-row.down .d { color: var(--down); }
+  .lad-row.start { outline: 1px dashed var(--glass-border); }
+  .lad-row.now { background: var(--btc); color: #1b1203; font-weight: 700; }
+  .lad-row.now .d { color: #1b1203; font-weight: 700; }
+
+  @media (max-width: 1150px) {
+    .layout { flex-direction: column; align-items: stretch; }
+    main, .ladder { margin-inline: auto; width: 100%; max-width: 960px; flex: none; }
+    .ladder { position: static; max-height: none; }
+    .ladder-list { max-height: 420px; flex: none; }
+  }
+  @media (max-width: 620px) { .sel { font-size: 16px; } .chart-wrap { height: 260px; } .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="watermark" id="wm" aria-hidden="true"></div>
+<div id="alerts" role="alert" aria-live="assertive"></div>
+
+<div class="layout">
+<main>
+  <h1><img class="coinLogo big" alt="" hidden><span>Crypto Live-Kurs</span></h1>
+
+  <form class="row" id="coinForm" autocomplete="off">
+    <label for="coinIn">Coin (Börsenkürzel)</label>
+    <input id="coinIn" class="sel coin" type="text" maxlength="12" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="z. B. ETH" aria-describedby="coinHelp">
+    <button class="btn" type="submit">Laden</button>
+  </form>
+  <div class="chips" id="chips" role="group" aria-label="Beliebte Coins"></div>
+  <p class="ref" id="coinHelp">Lade die Top-10-Liste …</p>
+
+  <div class="row">
+    <span>
+      <label for="intervalSel">Aktualisierung alle</label>
+      <select id="intervalSel" class="sel">
+        <option value="2000">2 Sekunden</option>
+        <option value="5000">5 Sekunden</option>
+        <option value="10000" selected>10 Sekunden</option>
+        <option value="15000">15 Sekunden</option>
+        <option value="30000">30 Sekunden</option>
+        <option value="60000">1 Minute</option>
+        <option value="120000">2 Minuten</option>
+        <option value="300000">5 Minuten</option>
+        <option value="custom">Eigene Zeit …</option>
+      </select>
+    </span>
+    <span class="custom" id="customWrap" hidden>
+      <input id="customSec" class="sel num" type="number" min="1" max="3600" step="1" value="10" aria-label="Eigene Zeit in Sekunden">
+      <label for="customSec">Sek.</label>
+    </span>
+  </div>
+
+  <div class="row">
+    <span><label for="stepIn">Matrix-Schritt</label> <input id="stepIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
+      <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Matrix-Schritt" aria-describedby="tipStep">i</button>
+        <span class="tip" id="tipStep" role="tooltip">
+          <b>Matrix-Schritt</b><br>
+          Abstand zwischen zwei Zeilen der Kurs-Matrix, in Dollar.<br>
+          <b>Leer lassen:</b> Die Seite wählt den Schritt automatisch passend zum Kurs (der Wert steht im Feld als „auto").<br>
+          <b>Zahl eintragen:</b> Die Matrix springt sofort auf diese Stufen. Beispiel: <b>100</b> ergibt Zeilen in 100er-Schritten. Die Matrix zeigt immer 40 Stufen nach oben und unten, ein kleiner Schritt zeigt also einen engeren Bereich um den Kurs.
+        </span></span></span>
+    <span><label for="dropIn">Meldung Fall (USD)</label> <input id="dropIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
+      <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Meldung Fall" aria-describedby="tipDrop">i</button>
+        <span class="tip" id="tipDrop" role="tooltip">
+          <b>Meldung bei Fall</b><br>
+          Eine <b>rote Meldung</b> erscheint, wenn der Dollar-Kurs um mindestens diesen Betrag unter den Referenzkurs fällt.<br>
+          <b>Referenz</b> ist der Kurs beim Laden des Coins. Nach jeder Meldung wird der Kurs der Meldung zur neuen Referenz.<br>
+          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 $ unter die Referenz gefallen ist. Die Änderung gilt sofort.
+        </span></span></span>
+    <span><label for="riseIn">Meldung Anstieg (EUR)</label> <input id="riseIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
+      <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Meldung Anstieg" aria-describedby="tipRise">i</button>
+        <span class="tip" id="tipRise" role="tooltip">
+          <b>Meldung bei Anstieg</b><br>
+          Eine <b>grüne Meldung</b> erscheint, wenn der Euro-Kurs um mindestens diesen Betrag über den Referenzkurs steigt.<br>
+          <b>Referenz</b> ist der Kurs beim Laden des Coins. Nach jeder Meldung wird der Kurs der Meldung zur neuen Referenz.<br>
+          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € über die Referenz gestiegen ist. Die Änderung gilt sofort.
+        </span></span></span>
+  </div>
+
+  <div class="grid">
+    <section class="card" aria-label="Kurs in Euro">
+      <div class="cur"><img class="coinLogo" alt="" hidden><span class="symTxt">BTC</span> / EUR</div>
+      <div class="price" id="eur">…</div>
+    </section>
+    <section class="card" aria-label="Kurs in US-Dollar">
+      <div class="cur"><img class="coinLogo" alt="" hidden><span class="symTxt">BTC</span> / USD</div>
+      <div class="price" id="usd">…</div>
+    </section>
+  </div>
+
+  <section class="chart-card" aria-label="Kursverlauf">
+    <div class="chart-top">
+      <div class="tabs" id="tfTabs" role="group" aria-label="Zeitraum"></div>
+      <div class="cur-switch" id="curSwitch" role="group" aria-label="Währung">
+        <button type="button" data-cur="eur" class="on">EUR</button>
+        <button type="button" data-cur="usd">USD</button>
+      </div>
+    </div>
+    <div class="chart-stats" id="chartStats">Lade Chart …</div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </section>
+
+  <p class="status" id="status">Lade Kurs …</p>
+  <p class="ref" id="ref"></p>
+  <div class="bar"><i id="progress"></i></div>
+</main>
+
+<aside class="ladder" aria-label="Kurs-Matrix">
+  <div class="ladder-title">
+    <h2>Kurs-Matrix <span class="symTxt">BTC</span></h2>
+    <span class="info">
+      <button type="button" class="info-btn" aria-label="Hilfe zur Kurs-Matrix" aria-describedby="matrixTip">i</button>
+      <span class="tip" id="matrixTip" role="tooltip">
+        <b>Was zeigt die Matrix?</b><br>
+        Preise in festen Stufen, 40 Stufen nach oben und unten, rund um den Kurs beim Laden des Coins. Die Stufe wird automatisch passend zum Kurs gewählt, du kannst sie oben bei „Matrix-Schritt" ändern.<br>
+        <b>Grün</b> = Preise über dem aktuellen Kurs, <b>rot</b> = darunter. Δ $ ist der Abstand zum Live-Kurs.<br>
+        Die EUR-Werte sind mit dem aktuellen Kursverhältnis umgerechnet (Richtwerte).<br>
+        Die <b>farbige Zeile</b> ist der Live-Kurs und wird bei jedem Update zentriert. „Neu zentrieren" legt das Raster auf den aktuellen Kurs.
+      </span>
+    </span>
+  </div>
+  <div class="tabs"><button type="button" id="recenter">Neu zentrieren</button></div>
+  <div class="lad-head"><span>Δ $</span><span>EUR</span><span>USD</span></div>
+  <div class="ladder-list" id="ladderList"></div>
+</aside>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const POPULAR = ["BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "LTC", "DOT", "LINK", "AVAX"];
+  const HUES = { BTC: 33, ETH: 225, SOL: 270, XRP: 200, ADA: 215, DOGE: 45, LTC: 210, DOT: 330, BNB: 48, AVAX: 355, LINK: 222 };
+  let SYM = "BTC";
+  let INTERVAL = 10000;
+  let gen = 0;                      // zählt Coin-Wechsel hoch, damit späte Antworten verworfen werden
+  let accent = "hsl(33,90%,56%)";
+  const last = {};                  // letzter Kurs je Währung
+
+  /* ---------- Hilfen ---------- */
+  async function getJSON(u) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const r = await fetch(u, { cache: "no-store", signal: ctl.signal });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } catch (e) {
+      throw new Error(e.name === "AbortError" ? "Zeitüberschreitung" : e.message);
+    } finally { clearTimeout(t); }
+  }
+  function digitsFor(v) { return v >= 1000 ? 0 : v >= 10 ? 2 : v >= 1 ? 3 : v >= 0.1 ? 4 : 6; }
+  function money(cur, v, d) {
+    if (d == null) d = digitsFor(v);
+    return new Intl.NumberFormat(cur === "eur" ? "de-DE" : "en-US", {
+      style: "currency", currency: cur.toUpperCase(), minimumFractionDigits: d, maximumFractionDigits: d
+    }).format(v);
+  }
+  function plain(v) { return new Intl.NumberFormat("de-DE", { maximumSignificantDigits: 6 }).format(v); }
+  function niceStep(price) {
+    const raw = price / 200, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    const n = m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10;
+    return Number((n * p).toPrecision(6));
+  }
+  const hueFor = s => { if (HUES[s] !== undefined) return HUES[s]; let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  const accentA = a => accent.replace("hsl(", "hsla(").replace(")", "," + a + ")");
+
+  /* ---------- Datenquellen (pro Währung) ---------- */
+  const KRAKEN_ALIAS = { BTC: "XBT", DOGE: "XDG" };
+  const providers = [
+    { name: "Kraken", async price(sym, cur) {
+        const j = await getJSON("https://api.kraken.com/0/public/Ticker?pair=" + (KRAKEN_ALIAS[sym] || sym) + cur.toUpperCase() + "&_=" + Date.now());
+        if (j.error && j.error.length) throw new Error(j.error[0]);
+        return parseFloat(j.result[Object.keys(j.result)[0]].c[0]);
+    }},
+    { name: "Bitstamp", async price(sym, cur) {
+        const j = await getJSON("https://www.bitstamp.net/api/v2/ticker/" + sym.toLowerCase() + cur + "/?_=" + Date.now());
+        return parseFloat(j.last);
+    }},
+    { name: "Coinbase", async price(sym, cur) {
+        const j = await getJSON("https://api.coinbase.com/v2/prices/" + sym + "-" + cur.toUpperCase() + "/spot");
+        return parseFloat(j.data.amount);
+    }},
+    { name: "CryptoCompare", async price(sym, cur) {
+        const j = await getJSON("https://min-api.cryptocompare.com/data/price?fsym=" + sym + "&tsyms=" + cur.toUpperCase());
+        const v = j[cur.toUpperCase()];
+        if (v === undefined) throw new Error("unbekannt");
+        return parseFloat(v);
+    }}
+  ];
+  async function fetchPrice(sym, cur, errors) {
+    for (const p of providers) {
+      try {
+        const v = await p.price(sym, cur);
+        if (!(v > 0)) throw new Error("kein Preis");
+        return { v, src: p.name };
+      } catch (e) { errors.push(p.name + " " + cur.toUpperCase() + ": " + e.message); }
+    }
+    return null;
+  }
+
+  /* ---------- Anzeige ---------- */
+  function show(cur, value) {
+    const el = $(cur);
+    if (value == null) { el.textContent = "nicht verfügbar"; return; }
+    el.textContent = money(cur, value);
+    if (last[cur] !== undefined && value !== last[cur]) {
+      el.classList.remove("up", "down");
+      el.classList.add(value > last[cur] ? "up" : "down");
+      setTimeout(() => el.classList.remove("up", "down"), 1500);
+    }
+    last[cur] = value;
+    checkAlert(cur, value);
+    if (cur === chartCur) { liveClose = value; drawChart(); }
+  }
+
+  async function update() {
+    const my = gen, sym = SYM, status = $("status"), errors = [];
+    const [e, u] = await Promise.all([fetchPrice(sym, "eur", errors), fetchPrice(sym, "usd", errors)]);
+    if (my !== gen) return;                               // Coin wurde inzwischen gewechselt
+    if (e) show("eur", e.v); else show("eur", null);
+    if (u) show("usd", u.v);
+    else show("usd", null);
+    if (e || u) { renderLadder(); }
+    if (e || u) {
+      const src = [...new Set([e && e.src, u && u.src].filter(Boolean))].join(" + ");
+      status.className = "status";
+      status.textContent = "Abgerufen: " + new Date().toLocaleTimeString("de-DE") + " (Quelle: " + src + ")" +
+        (e && u ? "" : " – " + (e ? "USD" : "EUR") + "-Kurs für " + sym + " nicht gefunden");
+    } else {
+      status.className = "status err";
+      status.textContent = "Für „" + sym + "“ wurde kein Kurs gefunden. Bitte das Kürzel prüfen (z. B. BTC, ETH, SOL). Neuer Versuch in " + intervalText() + ".";
+    }
+    $("progress").animate([{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }], { duration: INTERVAL, fill: "forwards" });
+  }
+
+  /* ---------- Preis-Meldungen ---------- */
+  const baseline = {};
+  let autoStep = null;
+  const stepIn = $("stepIn"), dropIn = $("dropIn"), riseIn = $("riseIn");
+  const userNum = el => { const v = parseFloat(el.value); return v > 0 ? v : null; };
+  const stepNow = () => userNum(stepIn) || autoStep || 0;
+  const dropUSD = () => userNum(dropIn) || autoStep || Infinity;
+  const riseEUR = () => userNum(riseIn) || autoStep || Infinity;
+
+  function showAlert(title, text, kind) {
+    const box = $("alerts"), el = document.createElement("div");
+    el.className = "alert" + (kind === "rise" ? " rise" : "");
+    el.innerHTML = "<div><strong></strong><span></span></div><button type=\"button\">Schließen</button>";
+    el.querySelector("strong").textContent = title;
+    el.querySelector("span").textContent = text + " · " + new Date().toLocaleTimeString("de-DE");
+    el.querySelector("button").onclick = () => el.remove();
+    box.prepend(el);
+    while (box.children.length > 4) box.lastChild.remove();
+    document.title = (kind === "rise" ? "▲ " : "▼ ") + title;
+  }
+  function updateRef() {
+    if (baseline.eur === undefined && baseline.usd === undefined) return;
+    const parts = [];
+    if (baseline.usd !== undefined) parts.push("USD −" + plain(dropUSD()) + " (Referenz " + money("usd", baseline.usd) + ")");
+    if (baseline.eur !== undefined) parts.push("EUR +" + plain(riseEUR()) + " (Referenz " + money("eur", baseline.eur) + ")");
+    $("ref").textContent = "Meldungen bei: " + parts.join(" · ");
+  }
+  function checkAlert(cur, value) {
+    if (autoStep === null) { autoStep = niceStep(value); setPlaceholders(); }
+    if (baseline[cur] === undefined) baseline[cur] = value;
+    if (cur === "usd" && baseline.usd - value >= dropUSD()) {
+      showAlert(SYM + " ist um " + money("usd", baseline.usd - value) + " gefallen",
+                "Von " + money("usd", baseline.usd) + " auf " + money("usd", value), "fall");
+      baseline.usd = value;
+    }
+    if (cur === "eur" && value - baseline.eur >= riseEUR()) {
+      showAlert(SYM + " ist um " + money("eur", value - baseline.eur) + " gestiegen",
+                "Von " + money("eur", baseline.eur) + " auf " + money("eur", value), "rise");
+      baseline.eur = value;
+    }
+    updateRef();
+  }
+  function setPlaceholders() {
+    const t = autoStep ? "auto (" + plain(autoStep) + ")" : "auto";
+    stepIn.placeholder = dropIn.placeholder = riseIn.placeholder = t;
+  }
+
+  /* ---------- Kurs-Matrix ---------- */
+  const LADDER_STEPS = 40;
+  let anchor = null;
+
+  function renderLadder() {
+    const list = $("ladderList");
+    if (last.usd === undefined) { list.innerHTML = ""; return; }
+    if (autoStep === null) { autoStep = niceStep(last.usd); setPlaceholders(); }
+    if (anchor === null) anchor = last.usd;
+    const step = stepNow(), live = last.usd, rate = last.eur !== undefined ? last.eur / last.usd : null;
+    const d = Math.max(digitsFor(live), step >= 1 ? 0 : Math.min(8, Math.ceil(-Math.log10(step))));
+    const dFmt = new Intl.NumberFormat("de-DE", { signDisplay: "exceptZero", maximumFractionDigits: d });
+    const eurNow = last.eur !== undefined ? money("eur", last.eur, d) : "–";
+    const row = (cls, dl, usd, eur, id) =>
+      '<div class="lad-row ' + cls + '"' + (id ? ' id="' + id + '"' : '') + '><span class="d">' + dl +
+      '</span><span>' + eur + '</span><span>' + money("usd", usd, d) + '</span></div>';
+
+    let html = "", liveDone = false;
+    for (let k = LADDER_STEPS; k >= -LADDER_STEPS; k--) {
+      const lvl = anchor + k * step;
+      if (!liveDone && lvl < live) { html += row("now", "JETZT", live, eurNow, "ladNow"); liveDone = true; }
+      if (lvl <= 0) continue;
+      if (k === 0 && Math.abs(anchor - live) < step * 0.001) continue;
+      html += row(k === 0 ? "start" : lvl > live ? "up" : "down", dFmt.format(lvl - live), lvl, rate ? money("eur", lvl * rate, d) : "–");
+    }
+    if (!liveDone) html += row("now", "JETZT", live, eurNow, "ladNow");
+    list.innerHTML = html;
+    const now = $("ladNow");
+    list.scrollTop = now.offsetTop - list.clientHeight / 2 + now.offsetHeight / 2;
+  }
+  $("recenter").onclick = () => { anchor = null; renderLadder(); };
+  stepIn.addEventListener("input", renderLadder);
+  [dropIn, riseIn].forEach(el => el.addEventListener("input", updateRef));
+  // Info-Fenster: Maus/Tastatur zeigt sie per CSS, Tippen (iPhone) öffnet und schließt sie
+  const infos = [...document.querySelectorAll(".info")];
+  function placeTip(info) {
+    if (info.closest(".ladder")) return;                 // Matrix-Info bleibt CSS-positioniert
+    const tip = info.querySelector(".tip"), r = info.getBoundingClientRect();
+    const w = Math.min(268, window.innerWidth - 24);
+    tip.style.position = "fixed";
+    tip.style.width = w + "px";
+    tip.style.top = (r.bottom + 8) + "px";
+    tip.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 12)) + "px";
+  }
+  infos.forEach(info => {
+    ["mouseenter", "focusin"].forEach(ev => info.addEventListener(ev, () => placeTip(info)));
+    info.querySelector(".info-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      const open = !info.classList.contains("open");
+      infos.forEach(i => i.classList.remove("open"));
+      if (open) { placeTip(info); info.classList.add("open"); }
+    });
+  });
+  document.addEventListener("click", () => infos.forEach(i => i.classList.remove("open")));
+
+  /* ---------- Chart ---------- */
+  const TFS = [
+    { label: "1 Min",  base: 1,    group: 1 },
+    { label: "5 Min",  base: 5,    group: 1 },
+    { label: "10 Min", base: 5,    group: 2 },
+    { label: "30 Min", base: 30,   group: 1 },
+    { label: "60 Min", base: 60,   group: 1 },
+    { label: "4 Std",  base: 240,  group: 1 },
+    { label: "Tag",    base: 1440, group: 1 }
+  ];
+  const MAX_POINTS = 100;
+  let tf = TFS[1], chartCur = "eur", candles = [], liveClose = null, chartMsg = "Lade Chart …", hover = null, loadToken = 0;
+  const canvas = $("chart"), ctx = canvas.getContext("2d");
+  const pct = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2, signDisplay: "exceptZero" });
+
+  async function loadKraken(sym, cur, base) {
+    const j = await getJSON("https://api.kraken.com/0/public/OHLC?pair=" + (KRAKEN_ALIAS[sym] || sym) + cur.toUpperCase() + "&interval=" + base + "&_=" + Date.now());
+    if (j.error && j.error.length) throw new Error(j.error[0]);
+    const key = Object.keys(j.result).find(k => k !== "last");
+    return j.result[key].map(r => ({ t: r[0] * 1000, o: +r[1], h: +r[2], l: +r[3], c: +r[4] }));
+  }
+  async function loadBitstamp(sym, cur, base) {
+    const j = await getJSON("https://www.bitstamp.net/api/v2/ohlc/" + sym.toLowerCase() + cur + "/?step=" + (base * 60) + "&limit=720&_=" + Date.now());
+    return j.data.ohlc.map(r => ({ t: +r.timestamp * 1000, o: +r.open, h: +r.high, l: +r.low, c: +r.close }));
+  }
+  function aggregate(arr, ms) {
+    const out = [];
+    for (const x of arr) {
+      const b = Math.floor(x.t / ms) * ms, l = out[out.length - 1];
+      if (l && l.t === b) { l.h = Math.max(l.h, x.h); l.l = Math.min(l.l, x.l); l.c = x.c; }
+      else out.push({ t: b, o: x.o, h: x.h, l: x.l, c: x.c });
+    }
+    return out;
+  }
+  async function loadChart() {
+    const token = ++loadToken, cur = chartCur, cfg = tf, sym = SYM, errs = [];
+    for (const fn of [loadKraken, loadBitstamp]) {
+      try {
+        let data = await fn(sym, cur, cfg.base);
+        if (cfg.group > 1) data = aggregate(data, cfg.base * cfg.group * 60000);
+        if (token !== loadToken) return;
+        if (data.length < 2) throw new Error("zu wenige Daten");
+        candles = data.slice(-MAX_POINTS);
+        liveClose = last[cur] !== undefined ? last[cur] : null;
+        chartMsg = null;
+        drawChart();
+        return;
+      } catch (e) { errs.push(fn.name.replace("load", "") + ": " + e.message); }
+    }
+    if (token !== loadToken) return;
+    candles = [];
+    chartMsg = "Chart für " + sym + " konnte nicht geladen werden (" + errs.join(" | ") + ")";
+    drawChart();
+  }
+  function fmtTime(ts, withDate) {
+    const d = new Date(ts);
+    if (tf.base >= 1440) return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+    const t = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    return (withDate || tf.base >= 240) ? d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " " + t : t;
+  }
+  function chartDigits(range, v) {
+    if (!(range > 0)) return digitsFor(v);
+    return Math.max(0, Math.min(8, Math.ceil(3 - Math.log10(range))));
+  }
+
+  function drawChart() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (!W || !H) return;
+    if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const stats = $("chartStats");
+    ctx.font = "12px Sora, system-ui, sans-serif";
+
+    if (!candles.length) {
+      ctx.fillStyle = "#9aa8d6"; ctx.textAlign = "center";
+      ctx.fillText((chartMsg || "Keine Daten").slice(0, 90), W / 2, H / 2);
+      stats.textContent = chartMsg || "";
+      return;
+    }
+    const pts = candles.map(c => ({ t: c.t, v: c.c }));
+    if (liveClose != null) pts[pts.length - 1].v = liveClose;
+    const vals = pts.map(p => p.v);
+    let lo = Math.min(...candles.map(c => c.l), ...vals), hi = Math.max(...candles.map(c => c.h), ...vals);
+    const pad = (hi - lo) * 0.08 || hi * 0.001;
+    lo -= pad; hi += pad;
+    const digits = chartDigits(hi - lo, vals[vals.length - 1]);
+    const fp = v => money(chartCur, v, digits);
+
+    const L = 8, R = 92, T = 12, B = 26, pw = W - L - R, ph = H - T - B;
+    const x = i => L + (pts.length === 1 ? 0 : i / (pts.length - 1)) * pw;
+    const y = v => T + (1 - (v - lo) / (hi - lo)) * ph;
+
+    ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.fillStyle = "#9aa8d6"; ctx.lineWidth = 1; ctx.textAlign = "left";
+    for (let k = 0; k <= 4; k++) {
+      const v = lo + (hi - lo) * k / 4, yy = Math.round(y(v)) + .5;
+      ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke();
+      ctx.fillText(fp(v), L + pw + 8, yy + 4);
+    }
+    for (let k = 0; k < 5; k++) {
+      const i = Math.round(k * (pts.length - 1) / 4);
+      ctx.textAlign = k === 0 ? "left" : k === 4 ? "right" : "center";
+      ctx.fillText(fmtTime(pts[i].t), x(i), H - 8);
+    }
+    const grad = ctx.createLinearGradient(0, T, 0, T + ph);
+    grad.addColorStop(0, accentA(.38)); grad.addColorStop(1, accentA(0));
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.v)) : ctx.moveTo(x(i), y(p.v)));
+    ctx.lineTo(x(pts.length - 1), T + ph); ctx.lineTo(x(0), T + ph); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.v)) : ctx.moveTo(x(i), y(p.v)));
+    ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+
+    const lastV = pts[pts.length - 1].v, ly = y(lastV);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = accentA(.6); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, ly); ctx.lineTo(L + pw, ly); ctx.stroke(); ctx.setLineDash([]);
+    const label = fp(lastV), lw = ctx.measureText(label).width + 12;
+    ctx.fillStyle = accent; ctx.fillRect(L + pw + 2, ly - 10, Math.min(lw, R - 2), 20);
+    ctx.fillStyle = "#1b1203"; ctx.textAlign = "left"; ctx.fillText(label, L + pw + 8, ly + 4);
+
+    if (hover != null) {
+      const i = Math.max(0, Math.min(pts.length - 1, hover)), px = x(i), py = y(pts[i].v);
+      ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(px, T); ctx.lineTo(px, T + ph); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.fill();
+      const l1 = fp(pts[i].v), l2 = fmtTime(pts[i].t, true);
+      const bw = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 20, bh = 42;
+      let bx = px + 12; if (bx + bw > L + pw) bx = px - 12 - bw;
+      const by = Math.max(T, Math.min(py - bh / 2, T + ph - bh));
+      ctx.fillStyle = "rgba(15,27,61,.95)"; ctx.strokeStyle = "rgba(255,255,255,.2)";
+      ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 8) : ctx.rect(bx, by, bw, bh)); ctx.fill(); ctx.stroke();
+      ctx.textAlign = "left"; ctx.fillStyle = "#f4f6ff"; ctx.fillText(l1, bx + 10, by + 17);
+      ctx.fillStyle = "#9aa8d6"; ctx.fillText(l2, bx + 10, by + 33);
+    }
+    const chg = (lastV / pts[0].v - 1) * 100;
+    const hiC = Math.max(...candles.map(c => c.h), lastV), loC = Math.min(...candles.map(c => c.l), lastV);
+    stats.innerHTML = "Hoch <b>" + fp(hiC) + "</b> Tief <b>" + fp(loC) + "</b> " +
+      "Verlauf (" + pts.length + " Kerzen) <b class=\"" + (chg >= 0 ? "pos" : "neg") + "\">" + pct.format(chg) + " %</b>";
+  }
+
+  function pointer(e) {
+    if (!candles.length) return;
+    const r = canvas.getBoundingClientRect(), cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const pw = r.width - 8 - 92;
+    hover = Math.round((cx - 8) / pw * (candles.length - 1));
+    drawChart();
+  }
+  canvas.addEventListener("mousemove", pointer);
+  canvas.addEventListener("touchstart", pointer, { passive: true });
+  canvas.addEventListener("touchmove", pointer, { passive: true });
+  ["mouseleave", "touchend"].forEach(ev => canvas.addEventListener(ev, () => { hover = null; drawChart(); }));
+  new ResizeObserver(drawChart).observe(canvas);
+
+  const tabs = $("tfTabs");
+  TFS.forEach(t => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = t.label; b.className = t === tf ? "on" : "";
+    b.onclick = () => {
+      tf = t; [...tabs.children].forEach(c => c.classList.toggle("on", c === b));
+      candles = []; chartMsg = "Lade Chart …"; drawChart(); loadChart();
+    };
+    tabs.appendChild(b);
+  });
+  document.querySelectorAll("#curSwitch button").forEach(b => b.onclick = () => {
+    chartCur = b.dataset.cur;
+    document.querySelectorAll("#curSwitch button").forEach(c => c.classList.toggle("on", c === b));
+    candles = []; chartMsg = "Lade Chart …"; drawChart(); loadChart();
+  });
+  setInterval(loadChart, 30000);
+
+  /* ---------- Coin-Logo (Hintergrund, Überschrift, Karten) ---------- */
+  const LOGO_SRCS = [
+    s => "https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/" + s.toLowerCase() + ".svg",
+    s => "https://assets.coincap.io/assets/icons/" + s.toLowerCase() + "@2x.png"
+  ];
+  const logoCache = {};
+  function findLogo(sym) {
+    if (logoCache[sym] !== undefined) return Promise.resolve(logoCache[sym]);
+    return new Promise(resolve => {
+      let i = 0;
+      const next = () => {
+        if (i >= LOGO_SRCS.length) { logoCache[sym] = null; return resolve(null); }
+        const url = LOGO_SRCS[i++](sym), img = new Image();
+        let done = false;
+        const fail = () => { if (done) return; done = true; next(); };
+        img.onload = () => { if (done) return; done = true; logoCache[sym] = url; resolve(url); };
+        img.onerror = fail;
+        setTimeout(fail, 6000);
+        img.src = url;
+      };
+      next();
+    });
+  }
+  function setWatermark(sym) {
+    const el = $("wm"), h = hueFor(sym), logos = document.querySelectorAll(".coinLogo");
+    logos.forEach(i => { i.hidden = true; i.removeAttribute("src"); });
+    // Sofort: farbiger Kreis mit Kürzel als Ersatz
+    const label = sym === "BTC" ? "₿" : sym.slice(0, 4);
+    const fs = sym === "BTC" ? 68 : label.length > 3 ? 26 : label.length > 2 ? 32 : 40;
+    el.innerHTML = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="hsl(' + h + ',90%,56%)"/>' +
+      '<g transform="rotate(14 50 50)"><text x="50" y="50" text-anchor="middle" dominant-baseline="central" ' +
+      'font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="' + fs + '" fill="#fff">' + label + '</text></g></svg>';
+    // Danach: echtes Coin-Logo, falls eine Quelle es kennt
+    findLogo(sym).then(url => {
+      if (SYM !== sym || !url) return;
+      const big = new Image(); big.alt = ""; big.src = url;
+      el.innerHTML = ""; el.appendChild(big);
+      logos.forEach(i => { i.src = url; i.hidden = false; });
+    });
+  }
+
+  /* ---------- Abruf-Intervall ---------- */
+  const sel = $("intervalSel"), customWrap = $("customWrap"), customSec = $("customSec"), MAX_SEC = 3600;
+  function intervalText() {
+    const sec = INTERVAL / 1000;
+    return sec >= 60 && sec % 60 === 0 ? sec / 60 + (sec === 60 ? " Minute" : " Minuten") : sec + " Sekunden";
+  }
+  function saveInterval() { try { localStorage.setItem("cryptoInterval", String(INTERVAL)); } catch (e) {} }
+  try {
+    const saved = +localStorage.getItem("cryptoInterval");
+    if (saved >= 1000 && saved <= MAX_SEC * 1000) {
+      if ([...sel.options].some(o => o.value === String(saved))) sel.value = String(saved);
+      else { sel.value = "custom"; customSec.value = saved / 1000; }
+    }
+  } catch (e) {}
+  customWrap.hidden = sel.value !== "custom";
+  INTERVAL = sel.value === "custom" ? Math.round(+customSec.value * 1000) : +sel.value;
+
+  let runId = 0, timer = null;
+  async function loop(id) {
+    await update();
+    if (id !== runId) return;
+    timer = setTimeout(() => loop(id), INTERVAL);
+  }
+  function restart() { runId++; clearTimeout(timer); loop(runId); }
+  function applyCustom() {
+    let v = Math.round(parseFloat(customSec.value));
+    if (!(v >= 1)) { customSec.value = INTERVAL / 1000; return; }
+    v = Math.min(v, MAX_SEC);
+    customSec.value = v;
+    if (v * 1000 === INTERVAL) return;
+    INTERVAL = v * 1000; saveInterval(); restart();
+  }
+  sel.onchange = () => {
+    if (sel.value === "custom") { customWrap.hidden = false; customSec.focus(); customSec.select(); applyCustom(); return; }
+    customWrap.hidden = true;
+    INTERVAL = +sel.value; saveInterval(); restart();
+  };
+  customSec.onchange = applyCustom;
+  customSec.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); applyCustom(); } };
+
+  /* ---------- Coin-Auswahl ---------- */
+  // Schnellwahl: die 10 größten Coins nach Marktkapitalisierung (ohne Stablecoins und Wrapped/Staked-Token)
+  const chipsBox = $("chips");
+  const SKIP = new Set(["USDT","USDC","DAI","USDE","FDUSD","TUSD","BUSD","USDS","PYUSD","USDD","USDP","GUSD","FRAX","LUSD","USD1","RLUSD",
+                        "STETH","WSTETH","WBTC","WEETH","WBETH","CBBTC","RETH","CBETH","WETH","BSC-USD","SUSDE","BUIDL","USDY","USDG"]);
+  const HELP_TOP = "Schnellwahl: die 10 größten Coins nach Marktkapitalisierung (ohne Stablecoins), wird automatisch aktualisiert. Oder ein beliebiges Kürzel eingeben.";
+  const HELP_FALLBACK = "Die Top-10-Liste konnte nicht geladen werden, es wird eine feste Liste angezeigt. Du kannst jedes Kürzel selbst eingeben, zum Beispiel BTC, ETH, SOL.";
+
+  function renderChips(list, names) {
+    chipsBox.innerHTML = "";
+    list.forEach((sym, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip" + (sym === SYM ? " on" : ""); b.dataset.sym = sym;
+      b.textContent = sym;
+      if (names && names[i]) b.title = "Platz " + (i + 1) + ": " + names[i];
+      b.onclick = () => setCoin(sym);
+      chipsBox.appendChild(b);
+    });
+  }
+  function pickTop(items) {                         // items: [{sym, name}] nach Marktkapitalisierung sortiert
+    const out = [];
+    for (const it of items) {
+      const sym = String(it.sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!sym || SKIP.has(sym) || out.some(o => o.sym === sym)) continue;
+      out.push({ sym, name: it.name });
+      if (out.length === 10) break;
+    }
+    return out;
+  }
+  async function fetchTop() {
+    try {
+      const j = await getJSON("https://min-api.cryptocompare.com/data/top/mktcapfull?limit=40&tsym=USD");
+      const top = pickTop(j.Data.map(d => ({ sym: d.CoinInfo.Name, name: d.CoinInfo.FullName })));
+      if (top.length === 10) return top;
+    } catch (e) {}
+    const j = await getJSON("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1");
+    const top = pickTop(j.map(d => ({ sym: d.symbol, name: d.name })));
+    if (top.length < 10) throw new Error("zu wenige Coins");
+    return top;
+  }
+  async function loadTop() {
+    try {
+      const top = await fetchTop();
+      renderChips(top.map(t => t.sym), top.map(t => t.name));
+      $("coinHelp").textContent = HELP_TOP;
+      try { localStorage.setItem("cryptoTop", JSON.stringify({ t: Date.now(), top })); } catch (e) {}
+    } catch (e) {
+      if (!chipsBox.children.length) renderChips(POPULAR.slice(0, 10));
+      if (!cachedTop) $("coinHelp").textContent = HELP_FALLBACK;
+    }
+  }
+  let cachedTop = null;
+  try { cachedTop = JSON.parse(localStorage.getItem("cryptoTop") || "null"); } catch (e) {}
+  if (cachedTop && Array.isArray(cachedTop.top) && cachedTop.top.length === 10) {
+    renderChips(cachedTop.top.map(t => t.sym), cachedTop.top.map(t => t.name));
+    $("coinHelp").textContent = HELP_TOP;
+  } else { cachedTop = null; renderChips(POPULAR.slice(0, 10)); }
+  loadTop();
+  setInterval(loadTop, 60 * 60 * 1000);             // Rangliste stündlich erneuern
+
+  function setCoin(raw) {
+    const s = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+    if (!s) return;
+    SYM = s; gen++;
+    try { localStorage.setItem("cryptoSym", s); } catch (e) {}
+    for (const k in last) delete last[k];
+    for (const k in baseline) delete baseline[k];
+    anchor = null; autoStep = null;
+    stepIn.value = dropIn.value = riseIn.value = ""; setPlaceholders();
+    candles = []; liveClose = null; chartMsg = "Lade Chart …"; hover = null;
+    ["eur", "usd"].forEach(c => { $(c).textContent = "…"; $(c).classList.remove("up", "down"); });
+    $("ladderList").innerHTML = ""; $("ref").textContent = "";
+    $("coinIn").value = s;
+    document.querySelectorAll(".symTxt").forEach(n => n.textContent = s);
+    document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c.dataset.sym === s));
+    accent = "hsl(" + hueFor(s) + ",90%,56%)";
+    document.documentElement.style.setProperty("--btc", accent);
+    setWatermark(s);
+    document.title = s + " Live-Kurs";
+    $("status").className = "status"; $("status").textContent = "Lade Kurs …";
+    drawChart(); loadChart(); restart();
+  }
+  $("coinForm").addEventListener("submit", e => { e.preventDefault(); setCoin($("coinIn").value); $("coinIn").blur(); });
+
+  let startSym = "BTC";
+  try { startSym = localStorage.getItem("cryptoSym") || "BTC"; } catch (e) {}
+  setCoin(startSym);
+</script>
+</body>
+</html>
