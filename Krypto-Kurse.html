@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Crypto Live-Kurs v10</title>
+<title>Crypto Live-Kurs v11</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
@@ -325,8 +325,8 @@
     <span class="snd">
       <button type="button" id="soundBtn" class="sel" aria-pressed="false">🔔 Ton bei Anstieg und Fall: Aus</button>
       <select id="soundMode" class="sel" aria-label="Wann soll der Ton erklingen?" hidden>
-        <option value="alert" selected>bei Meldung (grün / rot)</option>
-        <option value="every">bei jeder Änderung</option>
+        <option value="every" selected>bei jeder Änderung</option>
+        <option value="alert">nur bei Meldung (grün / rot)</option>
       </select>
       <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zum Ton" aria-describedby="tipSound">i</button>
         <span class="tip" id="tipSound" role="tooltip">
@@ -335,6 +335,7 @@
           <b>Wichtig:</b> Der Ton klingt nur, solange die Seite offen und der Bildschirm an ist. Der Stumm-Schalter am iPhone kann ihn unterdrücken.
         </span></span>
     </span>
+    <span class="hint" id="soundInfo" aria-live="polite"></span>
   </div>
 
   <div class="grid">
@@ -531,21 +532,53 @@
   }
   /* ---------- Ton bei Anstieg ---------- */
   let audioCtx = null, soundOn = false, soundMode = "alert", lastBeep = 0;
-  try { soundOn = localStorage.getItem("cryptoSound") === "1"; soundMode = localStorage.getItem("cryptoSoundMode") === "every" ? "every" : "alert"; } catch (e) {}
+  try { soundOn = localStorage.getItem("cryptoSound") === "1"; soundMode = localStorage.getItem("cryptoSoundMode") === "alert" ? "alert" : "every"; } catch (e) {}
+  /* Zwei Wege: 1) HTML-Audio mit eingebauter WAV-Datei (läuft am iPhone auch bei aktivem Stumm-Schalter),
+     2) Web Audio als Ersatz. Beides wird beim Antippen des Knopfs freigeschaltet. */
+  function makeWav(notes, tri) {
+    const sr = 22050, total = notes[notes.length - 1][1] + 0.4, n = Math.floor(sr * total), pcm = new Int16Array(n);
+    notes.forEach(([f, d]) => {
+      const a = Math.floor(d * sr), len = Math.floor(0.34 * sr);
+      for (let i = 0; i < len && a + i < n; i++) {
+        const t = i / sr, ph = (f * t) % 1;
+        const w = tri ? (4 * Math.abs(ph - 0.5) - 1) : Math.sin(2 * Math.PI * f * t);
+        const env = Math.min(1, i / (0.02 * sr)) * Math.exp(-5 * t);
+        pcm[a + i] += Math.round(w * env * 0.6 * 32767);
+      }
+    });
+    const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); str(8, "WAVE"); str(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, "data"); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, pcm[i], true);
+    const u8 = new Uint8Array(buf); let bin = "";
+    for (let i = 0; i < u8.length; i += 4096) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 4096));
+    return "data:audio/wav;base64," + btoa(bin);
+  }
+  const TONES = { up: [[659.25, 0], [880, 0.14]], down: [[392, 0], [261.63, 0.16]] };
+  const tones = {};
+  function toneEl(dir) {
+    if (tones[dir] !== undefined) return tones[dir];
+    try {
+      const a = new Audio(makeWav(TONES[dir], dir === "down"));
+      a.preload = "auto"; a.setAttribute("playsinline", ""); tones[dir] = a;
+    } catch (e) { tones[dir] = null; }
+    return tones[dir];
+  }
   function ensureAudio() {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       if (!audioCtx) audioCtx = new AC();
-      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (audioCtx.state !== "running") audioCtx.resume();      // auch "interrupted" (iOS nach Hintergrund)
       return audioCtx;
     } catch (e) { return null; }
   }
-  function chime(dir) {
-    const ac = ensureAudio(); if (!ac) return;
+  function chimeWebAudio(dir) {
+    const ac = ensureAudio(); if (!ac) return false;
     const now = ac.currentTime;
-    const notes = dir === "down" ? [[392, 0], [261.63, 0.16]] : [[659.25, 0], [880, 0.14]];   // Fall: G4 -> C4 (tief, absteigend), Anstieg: E5 -> A5 (hoch, aufsteigend)
-    notes.forEach(([f, d]) => {
+    TONES[dir === "down" ? "down" : "up"].forEach(([f, d]) => {
       const o = ac.createOscillator(), g = ac.createGain();
       o.type = dir === "down" ? "triangle" : "sine"; o.frequency.value = f;
       g.gain.setValueAtTime(0.0001, now + d);
@@ -553,6 +586,30 @@
       g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.32);
       o.connect(g); g.connect(ac.destination);
       o.start(now + d); o.stop(now + d + 0.35);
+    });
+    return true;
+  }
+  let soundNote = "";
+  function chime(dir) {
+    dir = dir === "down" ? "down" : "up";
+    const el = toneEl(dir);
+    const fallback = () => { soundNote = chimeWebAudio(dir) ? "" : "Der Browser blockiert den Ton. Tippe den Ton-Knopf aus und wieder an."; renderSound(); };
+    if (!el) { fallback(); return; }
+    try {
+      el.volume = 1; el.currentTime = 0;
+      const p = el.play();
+      if (p && p.then) p.then(() => { if (soundNote) { soundNote = ""; renderSound(); } }, fallback);
+    } catch (e) { fallback(); }
+  }
+  function unlockAudio() {          // beim Antippen: den tiefen Ton einmal lautlos anspielen, damit spätere Abspielungen erlaubt sind
+    ensureAudio();
+    ["down"].forEach(d => {                          // "up" wird gleich als hörbarer Probeton gespielt und ist damit freigeschaltet
+      const el = toneEl(d); if (!el) return;
+      try {
+        el.muted = true; const p = el.play();
+        const done = () => { try { el.pause(); el.currentTime = 0; el.muted = false; } catch (e) {} };
+        if (p && p.then) p.then(done, done); else done();
+      } catch (e) {}
     });
   }
   function priceSound(kind, dir) {          // kind: "alert" (Meldung) oder "every" (jede Änderung); dir: "up" oder "down"
@@ -562,6 +619,13 @@
   }
   function renderSound() {
     const b = $("soundBtn");
+    let info = soundNote;
+    if (!info && soundOn) {
+      info = soundMode === "alert"
+        ? "Ton nur bei Meldung: Anstieg ab " + (typeof riseEUR === "function" ? plain(riseEUR()) : "?") + " €, Fall ab " + (typeof dropUSD === "function" ? plain(dropUSD()) : "?") + " $."
+        : "Ton bei jeder Kursänderung (höchstens alle 1,2 Sekunden).";
+    }
+    $("soundInfo").textContent = soundOn ? info : "";
     b.setAttribute("aria-pressed", soundOn ? "true" : "false");
     b.textContent = "🔔 Ton bei Anstieg und Fall: " + (soundOn ? "An" : "Aus");
     $("soundMode").hidden = !soundOn; $("soundMode").value = soundMode;
@@ -569,10 +633,12 @@
   $("soundBtn").onclick = () => {
     soundOn = !soundOn;
     try { localStorage.setItem("cryptoSound", soundOn ? "1" : "0"); } catch (e) {}
-    if (soundOn) { lastBeep = 0; chime(); }      // Antippen schaltet den Ton in Safari frei, Probeton
+    if (soundOn) { soundNote = ""; unlockAudio(); lastBeep = 0; chime("up"); setTimeout(() => chime("down"), 700); }   // Antippen schaltet den Ton frei; Probe: hoch, dann tief
     renderSound();
   };
-  $("soundMode").onchange = () => { soundMode = $("soundMode").value === "every" ? "every" : "alert"; try { localStorage.setItem("cryptoSoundMode", soundMode); } catch (e) {} };
+  $("soundMode").onchange = () => { soundMode = $("soundMode").value === "every" ? "every" : "alert"; try { localStorage.setItem("cryptoSoundMode", soundMode); } catch (e) {} renderSound(); };
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && soundOn) ensureAudio(); });
+  document.addEventListener("click", () => { if (soundOn && audioCtx && audioCtx.state !== "running") audioCtx.resume(); }, { passive: true });
   renderSound();
 
   function checkAlert(cur, value) {
@@ -591,6 +657,7 @@
       baseline.eur = value;
     }
     updateRef();
+    if (soundOn && soundMode === "alert") renderSound();
   }
   function setPlaceholders() {
     const t = autoStep ? "auto (" + plain(autoStep) + ")" : "auto";
