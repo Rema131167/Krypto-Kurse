@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Crypto Live-Kurs v7</title>
+<title>Crypto Live-Kurs v10</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
@@ -237,6 +237,10 @@
     .lad-row, .lad-head { font-size: .85rem; }
     #alerts { top: max(10px, env(safe-area-inset-top)); }
   }
+  #soundBtn[aria-pressed="true"] { background: var(--btc); border-color: var(--btc); color: #1b1203; font-weight: 700; }
+  .snd { display: inline-flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: center; }
+  .snd .sel { margin-left: 0; }
+  .snd .sel[hidden], #soundMode[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -316,6 +320,21 @@
           <b>Referenz</b> ist der Kurs beim Laden des Coins. Nach jeder Meldung wird der Kurs der Meldung zur neuen Referenz.<br>
           <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € über die Referenz gestiegen ist. Die Änderung gilt sofort.
         </span></span></span>
+  </div>
+  <div class="row" id="soundRow">
+    <span class="snd">
+      <button type="button" id="soundBtn" class="sel" aria-pressed="false">🔔 Ton bei Anstieg und Fall: Aus</button>
+      <select id="soundMode" class="sel" aria-label="Wann soll der Ton erklingen?" hidden>
+        <option value="alert" selected>bei Meldung (grün / rot)</option>
+        <option value="every">bei jeder Änderung</option>
+      </select>
+      <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zum Ton" aria-describedby="tipSound">i</button>
+        <span class="tip" id="tipSound" role="tooltip">
+          <b>Ton bei Anstieg und Fall</b><br>
+          Beim <b>Anstieg</b> erklingt ein hoher, aufsteigender Doppelton, beim <b>Fall</b> ein tieferer, absteigender. <b>Bei Meldung:</b> nur wenn die grüne (Anstieg) oder die rote (Fall) Meldung erscheint. <b>Bei jeder Änderung:</b> bei jeder Abfrage, in der der Euro-Kurs höher oder niedriger ist als zuvor (kann häufig piepen).<br>
+          <b>Wichtig:</b> Der Ton klingt nur, solange die Seite offen und der Bildschirm an ist. Der Stumm-Schalter am iPhone kann ihn unterdrücken.
+        </span></span>
+    </span>
   </div>
 
   <div class="grid">
@@ -452,6 +471,7 @@
     const el = $(cur);
     if (value == null) { el.textContent = "nicht verfügbar"; return; }
     el.textContent = money(cur, value);
+    if (cur === "eur" && last.eur !== undefined && value !== last.eur) priceSound("every", value > last.eur ? "up" : "down");
     if (last[cur] !== undefined && value !== last[cur]) {
       el.classList.remove("up", "down");
       el.classList.add(value > last[cur] ? "up" : "down");
@@ -509,17 +529,65 @@
     if (baseline.eur !== undefined) parts.push("EUR +" + plain(riseEUR()) + " (Referenz " + money("eur", baseline.eur) + ")");
     $("ref").textContent = "Meldungen bei: " + parts.join(" · ");
   }
+  /* ---------- Ton bei Anstieg ---------- */
+  let audioCtx = null, soundOn = false, soundMode = "alert", lastBeep = 0;
+  try { soundOn = localStorage.getItem("cryptoSound") === "1"; soundMode = localStorage.getItem("cryptoSoundMode") === "every" ? "every" : "alert"; } catch (e) {}
+  function ensureAudio() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    } catch (e) { return null; }
+  }
+  function chime(dir) {
+    const ac = ensureAudio(); if (!ac) return;
+    const now = ac.currentTime;
+    const notes = dir === "down" ? [[392, 0], [261.63, 0.16]] : [[659.25, 0], [880, 0.14]];   // Fall: G4 -> C4 (tief, absteigend), Anstieg: E5 -> A5 (hoch, aufsteigend)
+    notes.forEach(([f, d]) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = dir === "down" ? "triangle" : "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, now + d);
+      g.gain.exponentialRampToValueAtTime(0.35, now + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.32);
+      o.connect(g); g.connect(ac.destination);
+      o.start(now + d); o.stop(now + d + 0.35);
+    });
+  }
+  function priceSound(kind, dir) {          // kind: "alert" (Meldung) oder "every" (jede Änderung); dir: "up" oder "down"
+    if (!soundOn || soundMode !== kind) return;
+    const t = Date.now(); if (t - lastBeep < 1200) return;   // nie öfter als alle 1,2 s
+    lastBeep = t; chime(dir);
+  }
+  function renderSound() {
+    const b = $("soundBtn");
+    b.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    b.textContent = "🔔 Ton bei Anstieg und Fall: " + (soundOn ? "An" : "Aus");
+    $("soundMode").hidden = !soundOn; $("soundMode").value = soundMode;
+  }
+  $("soundBtn").onclick = () => {
+    soundOn = !soundOn;
+    try { localStorage.setItem("cryptoSound", soundOn ? "1" : "0"); } catch (e) {}
+    if (soundOn) { lastBeep = 0; chime(); }      // Antippen schaltet den Ton in Safari frei, Probeton
+    renderSound();
+  };
+  $("soundMode").onchange = () => { soundMode = $("soundMode").value === "every" ? "every" : "alert"; try { localStorage.setItem("cryptoSoundMode", soundMode); } catch (e) {} };
+  renderSound();
+
   function checkAlert(cur, value) {
     if (autoStep === null) { autoStep = niceStep(value); setPlaceholders(); }
     if (baseline[cur] === undefined) baseline[cur] = value;
     if (cur === "usd" && baseline.usd - value >= dropUSD()) {
       showAlert(SYM + " ist um " + money("usd", baseline.usd - value) + " gefallen",
                 "Von " + money("usd", baseline.usd) + " auf " + money("usd", value), "fall");
+      priceSound("alert", "down");
       baseline.usd = value;
     }
     if (cur === "eur" && value - baseline.eur >= riseEUR()) {
       showAlert(SYM + " ist um " + money("eur", value - baseline.eur) + " gestiegen",
                 "Von " + money("eur", baseline.eur) + " auf " + money("eur", value), "rise");
+      priceSound("alert", "up");
       baseline.eur = value;
     }
     updateRef();
