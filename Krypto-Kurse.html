@@ -182,7 +182,7 @@
     <button class="btn" type="submit">Laden</button>
   </form>
   <div class="chips" id="chips" role="group" aria-label="Beliebte Coins"></div>
-  <p class="ref" id="coinHelp">Lade die Top-10-Liste …</p>
+  <p class="ref" id="coinHelp">Schnellwahl oder ein beliebiges Börsenkürzel eingeben, zum Beispiel ADA, DOGE, LINK.</p>
 
   <div class="row">
     <span>
@@ -282,7 +282,6 @@
 
 <script>
   const $ = id => document.getElementById(id);
-  const POPULAR = ["BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "LTC", "DOT", "LINK", "AVAX"];
   const HUES = { BTC: 33, ETH: 225, SOL: 270, XRP: 200, ADA: 215, DOGE: 45, LTC: 210, DOT: 330, BNB: 48, AVAX: 355, LINK: 222 };
   let SYM = "BTC";
   let INTERVAL = 10000;
@@ -745,64 +744,17 @@
   customSec.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); applyCustom(); } };
 
   /* ---------- Coin-Auswahl ---------- */
-  // Schnellwahl: die 10 größten Coins nach Marktkapitalisierung (ohne Stablecoins und Wrapped/Staked-Token)
+  // Schnellwahl: feste Liste
   const chipsBox = $("chips");
-  const SKIP = new Set(["USDT","USDC","DAI","USDE","FDUSD","TUSD","BUSD","USDS","PYUSD","USDD","USDP","GUSD","FRAX","LUSD","USD1","RLUSD",
-                        "STETH","WSTETH","WBTC","WEETH","WBETH","CBBTC","RETH","CBETH","WETH","BSC-USD","SUSDE","BUIDL","USDY","USDG"]);
-  const HELP_TOP = "Schnellwahl: die 10 größten Coins nach Marktkapitalisierung (ohne Stablecoins), wird automatisch aktualisiert. Oder ein beliebiges Kürzel eingeben.";
-  const HELP_FALLBACK = "Die Top-10-Liste konnte nicht geladen werden, es wird eine feste Liste angezeigt. Du kannst jedes Kürzel selbst eingeben, zum Beispiel BTC, ETH, SOL.";
-
-  function renderChips(list, names) {
-    chipsBox.innerHTML = "";
-    list.forEach((sym, i) => {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "chip" + (sym === SYM ? " on" : ""); b.dataset.sym = sym;
-      b.textContent = sym;
-      if (names && names[i]) b.title = "Platz " + (i + 1) + ": " + names[i];
-      b.onclick = () => setCoin(sym);
-      chipsBox.appendChild(b);
-    });
-  }
-  function pickTop(items) {                         // items: [{sym, name}] nach Marktkapitalisierung sortiert
-    const out = [];
-    for (const it of items) {
-      const sym = String(it.sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (!sym || SKIP.has(sym) || out.some(o => o.sym === sym)) continue;
-      out.push({ sym, name: it.name });
-      if (out.length === 10) break;
-    }
-    return out;
-  }
-  async function fetchTop() {
-    try {
-      const j = await getJSON("https://min-api.cryptocompare.com/data/top/mktcapfull?limit=40&tsym=USD");
-      const top = pickTop(j.Data.map(d => ({ sym: d.CoinInfo.Name, name: d.CoinInfo.FullName })));
-      if (top.length === 10) return top;
-    } catch (e) {}
-    const j = await getJSON("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1");
-    const top = pickTop(j.map(d => ({ sym: d.symbol, name: d.name })));
-    if (top.length < 10) throw new Error("zu wenige Coins");
-    return top;
-  }
-  async function loadTop() {
-    try {
-      const top = await fetchTop();
-      renderChips(top.map(t => t.sym), top.map(t => t.name));
-      $("coinHelp").textContent = HELP_TOP;
-      try { localStorage.setItem("cryptoTop", JSON.stringify({ t: Date.now(), top })); } catch (e) {}
-    } catch (e) {
-      if (!chipsBox.children.length) renderChips(POPULAR.slice(0, 10));
-      if (!cachedTop) $("coinHelp").textContent = HELP_FALLBACK;
-    }
-  }
-  let cachedTop = null;
-  try { cachedTop = JSON.parse(localStorage.getItem("cryptoTop") || "null"); } catch (e) {}
-  if (cachedTop && Array.isArray(cachedTop.top) && cachedTop.top.length === 10) {
-    renderChips(cachedTop.top.map(t => t.sym), cachedTop.top.map(t => t.name));
-    $("coinHelp").textContent = HELP_TOP;
-  } else { cachedTop = null; renderChips(POPULAR.slice(0, 10)); }
-  loadTop();
-  setInterval(loadTop, 60 * 60 * 1000);             // Rangliste stündlich erneuern
+  const FIXED = ["BTC", "ETH", "SOL", "XRP", "HYPE"];
+  FIXED.forEach(sym => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip" + (sym === SYM ? " on" : ""); b.dataset.sym = sym;
+    b.textContent = sym;
+    b.onclick = () => setCoin(sym);
+    chipsBox.appendChild(b);
+  });
+  $("coinHelp").textContent = "Schnellwahl oder ein beliebiges Börsenkürzel eingeben, zum Beispiel ADA, DOGE, LINK.";
 
   function setCoin(raw) {
     const s = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
