@@ -128,6 +128,7 @@
   details.how p { margin-top: 0.5rem; }
 
   /* Meldungen */
+  #verTag { position: absolute; top: max(6px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); z-index: 5; font-size: .6875rem; color: var(--muted); opacity: .75; letter-spacing: .02em; pointer-events: none; }
   #alerts { position: fixed; top: 0.875rem; left: 50%; transform: translateX(-50%); z-index: 10; width: min(35rem, calc(100% - 1.5rem)); display: grid; gap: 0.625rem; }
   .alert {
     display: flex; gap: 0.75rem; align-items: flex-start; justify-content: space-between; text-align: left;
@@ -229,7 +230,7 @@
   #sizeCtl button:focus-visible { outline: 2px solid var(--btc); outline-offset: 1px; }
   #sizeCtl #sizeVal { font-size: 13px; font-weight: 500; color: var(--muted); min-width: 54px; font-variant-numeric: tabular-nums; }
   @media (max-width: 620px) {
-    body { padding: 12px max(10px, env(safe-area-inset-right)) 76px max(10px, env(safe-area-inset-left)); align-items: flex-start; }
+    body { padding: 26px max(10px, env(safe-area-inset-right)) 76px max(10px, env(safe-area-inset-left)); align-items: flex-start; }
     .headrow { flex-direction: column; align-items: stretch; }
     .headrow h1 { flex: none; }
     .fng { margin-left: 0; }
@@ -251,6 +252,7 @@
 </style>
 </head>
 <body>
+<div id="verTag" title="Versionsstand">v12 · Update 19.11.2026</div>
 <div id="sizeCtl" role="group" aria-label="Anzeigegröße">
   <button type="button" id="sizeDn" aria-label="Kleiner">A−</button>
   <button type="button" id="sizeVal" aria-label="Größe zurücksetzen">100 %</button>
@@ -345,6 +347,26 @@
           <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € über dem letzten Tief liegt. Die Änderung gilt sofort.
         </span></span></span>
   </div>
+  <div class="row" id="targetRow">
+    <span><label for="tgtUp">Zielkurs oben (EUR)</label> <input id="tgtUp" class="sel num" type="number" min="0" step="any" placeholder="aus">
+      <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Zielkurs oben" aria-describedby="tipTargetUp">i</button>
+        <span class="tip" id="tipTargetUp" role="tooltip">
+          <b>Zielkurs oben</b><br>
+          Trag einen festen Euro-Kurs ein. Erreicht oder überschreitet der Kurs diesen Wert, kommt eine <b>grüne Meldung</b>.<br>
+          Der Alarm kommt <b>einmal</b>, danach wird das Feld geleert. <b>Leer lassen:</b> kein Alarm.<br>
+          <b>Beispiel:</b> Bei <b>80000</b> kommt die Meldung, sobald der Kurs 80.000 € oder mehr erreicht.<br>
+          Gilt pro Coin, bleibt gespeichert und läuft unabhängig von der Auswahl „Meldungen“. Ist der Ton an, piept er immer.
+        </span></span></span>
+    <span><label for="tgtDown">Zielkurs unten (EUR)</label> <input id="tgtDown" class="sel num" type="number" min="0" step="any" placeholder="aus">
+      <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Zielkurs unten" aria-describedby="tipTarget">i</button>
+        <span class="tip" id="tipTarget" role="tooltip">
+          <b>Zielkurs unten</b><br>
+          Trag einen festen Euro-Kurs ein. Erreicht oder unterschreitet der Kurs diesen Wert, kommt eine <b>rote Meldung</b>.<br>
+          Der Alarm kommt <b>einmal</b>, danach wird das Feld geleert. <b>Leer lassen:</b> kein Alarm.<br>
+          <b>Beispiel:</b> Bei <b>65000</b> kommt die Meldung, sobald der Kurs 65.000 € oder weniger erreicht.<br>
+          Gilt pro Coin, bleibt gespeichert und läuft unabhängig von der Auswahl „Meldungen“. Ist der Ton an, piept er immer.
+        </span></span></span>
+  </div>
   <div class="row" id="soundRow">
     <span class="snd">
       <button type="button" id="soundBtn" class="sel" aria-pressed="false">🔔 Ton bei Anstieg und Fall: Aus</button>
@@ -396,6 +418,7 @@
 
   <p class="status" id="status">Lade Kurs …</p>
   <p class="ref" id="ref"></p>
+  <p class="ref" id="refTarget"></p>
 </main>
 
 <aside class="ladder" aria-label="Kurs-Matrix">
@@ -558,6 +581,32 @@
     applyAlertMode(); updateRef(); if (typeof renderSound === "function") renderSound();
   };
   applyAlertMode();
+  /* ---------- Zielkurs-Alarm (pro Coin gespeichert) ---------- */
+  const tgtUp = $("tgtUp"), tgtDown = $("tgtDown");
+  function readTargets() { try { return JSON.parse(localStorage.getItem("cryptoTargets") || "{}") || {}; } catch (e) { return {}; } }
+  function saveTargets() {
+    const all = readTargets(), up = userNum(tgtUp), down = userNum(tgtDown);
+    if (up || down) all[SYM] = { up: up || null, down: down || null }; else delete all[SYM];
+    try { localStorage.setItem("cryptoTargets", JSON.stringify(all)); } catch (e) {}
+  }
+  function loadTargets() {
+    const t = readTargets()[SYM] || {};
+    tgtUp.value = t.up || ""; tgtDown.value = t.down || "";
+  }
+  [tgtUp, tgtDown].forEach(el => el.addEventListener("input", () => { saveTargets(); updateRef(); }));
+  function checkTargets(value) {
+    const up = userNum(tgtUp), down = userNum(tgtDown);
+    let hit = null;
+    if (up && value >= up) {
+      showAlert(SYM + " hat den Zielkurs " + money("eur", up) + " erreicht", "Aktuell " + money("eur", value), "rise");
+      tgtUp.value = ""; hit = "up";
+    }
+    if (down && value <= down) {
+      showAlert(SYM + " ist auf den Zielkurs " + money("eur", down) + " gefallen", "Aktuell " + money("eur", value), "fall");
+      tgtDown.value = ""; hit = "down";
+    }
+    if (hit) { saveTargets(); if (soundOn) { lastBeep = Date.now(); chime(hit); } }
+  }
   function showAlert(title, text, kind) {
     const box = $("alerts"), el = document.createElement("div");
     el.className = "alert" + (kind === "rise" ? " rise" : "");
@@ -570,8 +619,11 @@
     document.title = (kind === "rise" ? "▲ " : "▼ ") + title;
   }
   function updateRef() {
+    const cur = last.eur, tg = [], up = userNum(tgtUp), down = userNum(tgtDown);
+    if (up) tg.push("Ziel ▲ " + money("eur", up) + (cur !== undefined ? " (noch " + money("eur", Math.max(0, up - cur)) + ")" : ""));
+    if (down) tg.push("Ziel ▼ " + money("eur", down) + (cur !== undefined ? " (noch " + money("eur", Math.max(0, cur - down)) + ")" : ""));
+    $("refTarget").textContent = tg.length ? "Zielkurse: " + tg.join(" · ") : "";
     if (baseline.hi === undefined) return;
-    const cur = last.eur;
     const fallAt = baseline.hi - dropEUR(), riseAt = baseline.lo + riseEUR();
     if (alertMode === "off") { $("ref").textContent = "Meldungen: aus"; return; }
     const parts = [];
@@ -696,6 +748,7 @@
   function checkAlert(cur, value) {
     if (autoStep === null) { autoStep = niceStep(value); setPlaceholders(); }
     if (cur !== "eur") return;                       // Meldungen werden nur im Euro-Kurs geprüft
+    checkTargets(value);
     if (baseline.hi === undefined) { baseline.hi = baseline.lo = value; }
     baseline.hi = Math.max(baseline.hi, value);       // Hoch wandert mit, solange der Kurs steigt
     baseline.lo = Math.min(baseline.lo, value);       // Tief wandert mit, solange der Kurs fällt
@@ -1220,10 +1273,10 @@
     for (const k in last) delete last[k];
     for (const k in baseline) delete baseline[k];
     anchor = null; autoStep = null;
-    stepIn.value = dropIn.value = riseIn.value = ""; setPlaceholders();
+    stepIn.value = dropIn.value = riseIn.value = ""; setPlaceholders(); loadTargets();
     candles = []; liveClose = null; chartMsg = "Lade Chart …"; hover = null;
     ["eur", "usd"].forEach(c => { $(c).textContent = "…"; $(c).classList.remove("up", "down"); });
-    $("ladderList").innerHTML = ""; $("ref").textContent = "";
+    $("ladderList").innerHTML = ""; $("ref").textContent = ""; $("refTarget").textContent = "";
     $("coinIn").value = s;
     document.querySelectorAll(".symTxt").forEach(n => n.textContent = s);
     document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c.dataset.sym === s));
