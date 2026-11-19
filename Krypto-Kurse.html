@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Crypto Live-Kurs v11</title>
+<title>Crypto Live-Kurs v12</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
@@ -79,6 +79,9 @@
   .price.down { color: var(--down); }
   .status { margin-top: 1.75rem; color: var(--muted); font-size: .9rem; font-weight: 300; overflow-wrap: anywhere; }
   .bar { height: 0.25rem; width: min(20rem, 70%); margin: 0.875rem auto 0; background: var(--glass); border-radius: 0.25rem; overflow: hidden; }
+  .timer { display: flex; align-items: center; justify-content: center; gap: 0.625rem; margin-top: 0.5rem; }
+  .timer .bar { margin: 0; }
+  #countdown { color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; min-width: 6.5rem; text-align: left; }
   .bar i { display: block; height: 100%; width: 100%; background: var(--btc); transform-origin: left; }
   .err { color: var(--down); }
   .ref { margin-top: 0.625rem; color: var(--muted); font-size: .8rem; font-weight: 300; }
@@ -139,7 +142,9 @@
   .alert button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
 
+  #dropWrap[hidden], #riseWrap[hidden] { display: none; }
   /* Kurs-Matrix */
+  body.noladder .ladder, body.noladder #stepWrap { display: none; }
   .ladder {
     position: sticky; top: 1.25rem; flex: none; width: 18.75rem; max-height: calc(100vh - 3rem);
     display: flex; flex-direction: column; text-align: left; padding: 1.25rem 0.875rem 0.875rem;
@@ -163,6 +168,8 @@
     box-shadow: 0 0.75rem 2.5rem rgba(5,10,35,.6);
   }
   .tip b { font-weight: 700; }
+  h1 .h1info { vertical-align: middle; margin-left: .5rem; font-size: 1rem; font-weight: 400; letter-spacing: normal; }
+  h1 .h1info .tip { text-align: left; }
   .info:hover .tip, .info:focus-within .tip, .info.open .tip { display: block; }
   .lad-head, .lad-row { display: grid; grid-template-columns: 3.625rem 1fr 1fr; gap: 0.375rem; padding: 0.375rem 0.5rem; font-variant-numeric: tabular-nums; }
   .lad-head { margin-top: 0.75rem; color: var(--muted); font-size: .72rem; border-bottom: 1px solid var(--glass-border); }
@@ -256,7 +263,15 @@
 <div class="layout">
 <main>
   <div class="headrow">
-    <h1><img class="coinLogo big" alt="" hidden><span>Crypto Live-Kurs</span></h1>
+    <h1><img class="coinLogo big" alt="" hidden><span>Crypto Live-Kurs</span>
+      <span class="info h1info"><button type="button" class="info-btn" aria-label="Was macht dieses Tool?" aria-describedby="tipTool">i</button>
+        <span class="tip" id="tipTool" role="tooltip">
+          <b>Was macht das Tool?</b><br>
+          Zeigt den Live-Kurs eines Coins in Euro und Dollar, mit Chart, Kurs-Matrix und Angst-und-Gier-Index.<br>
+          Die <b>Kurs-Matrix</b> zeigt für verschiedene Kaufkurse, wie viel mehr oder weniger du investieren müsstest, um dasselbe Ziel zu erreichen.<br>
+          Meldet sich mit Hinweis und auf Wunsch mit Ton, wenn der Kurs um deinen Betrag steigt oder fällt.<br>
+          Die Kurse kommen von öffentlichen Börsen. Das ist keine Anlageberatung.
+        </span></span></h1>
     <aside class="fng" id="fng" aria-label="Fear-and-Greed-Index">
       <div class="fng-t">Fear &amp; Greed Index</div>
       <div class="fng-main"><span class="fng-v" id="fngV">–</span><span class="fng-l" id="fngL">Lade …</span></div>
@@ -294,9 +309,11 @@
       <label for="customSec">Sek.</label>
     </span>
   </div>
+  <div class="timer"><div class="bar"><i id="progress"></i></div><span id="countdown" aria-live="off"></span></div>
 
   <div class="row">
-    <span><label for="stepIn">Matrix-Schritt</label> <input id="stepIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
+    <button type="button" id="ladderBtn" class="sel" aria-pressed="true">▦ Matrix: An</button>
+    <span id="stepWrap"><label for="stepIn">Matrix-Schritt</label> <input id="stepIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
       <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Matrix-Schritt" aria-describedby="tipStep">i</button>
         <span class="tip" id="tipStep" role="tooltip">
           <b>Matrix-Schritt</b><br>
@@ -304,21 +321,28 @@
           <b>Leer lassen:</b> Die Seite wählt den Schritt automatisch passend zum Kurs (der Wert steht im Feld als „auto").<br>
           <b>Zahl eintragen:</b> Die Matrix springt sofort auf diese Stufen. Beispiel: <b>100</b> ergibt Zeilen in 100er-Schritten. Die Matrix zeigt immer 40 Stufen nach oben und unten, ein kleiner Schritt zeigt also einen engeren Bereich um den Kurs.
         </span></span></span>
-    <span><label for="dropIn">Meldung Fall (USD)</label> <input id="dropIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
+    <span><label for="alertMode">Meldungen</label>
+      <select id="alertMode" class="sel">
+        <option value="both" selected>bei Anstieg und Fall</option>
+        <option value="rise">nur bei Anstieg</option>
+        <option value="fall">nur bei Fall</option>
+        <option value="off">keine Meldung</option>
+      </select></span>
+    <span id="dropWrap"><label for="dropIn">Meldung Fall (EUR)</label> <input id="dropIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
       <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Meldung Fall" aria-describedby="tipDrop">i</button>
         <span class="tip" id="tipDrop" role="tooltip">
           <b>Meldung bei Fall</b><br>
-          Eine <b>rote Meldung</b> erscheint, wenn der Dollar-Kurs um mindestens diesen Betrag unter den Referenzkurs fällt.<br>
-          <b>Referenz</b> ist der Kurs beim Laden des Coins. Nach jeder Meldung wird der Kurs der Meldung zur neuen Referenz.<br>
-          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 $ unter die Referenz gefallen ist. Die Änderung gilt sofort.
+          Eine <b>rote Meldung</b> erscheint, wenn der Euro-Kurs um mindestens diesen Betrag unter das <b>letzte Hoch</b> fällt.<br>
+          <b>Letztes Hoch</b> ist der höchste Kurs seit dem Laden des Coins bzw. seit der letzten Meldung. Steigt der Kurs weiter, wandert das Hoch mit.<br>
+          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € unter dem letzten Hoch liegt. Die Änderung gilt sofort.
         </span></span></span>
-    <span><label for="riseIn">Meldung Anstieg (EUR)</label> <input id="riseIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
+    <span id="riseWrap"><label for="riseIn">Meldung Anstieg (EUR)</label> <input id="riseIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
       <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Meldung Anstieg" aria-describedby="tipRise">i</button>
         <span class="tip" id="tipRise" role="tooltip">
           <b>Meldung bei Anstieg</b><br>
-          Eine <b>grüne Meldung</b> erscheint, wenn der Euro-Kurs um mindestens diesen Betrag über den Referenzkurs steigt.<br>
-          <b>Referenz</b> ist der Kurs beim Laden des Coins. Nach jeder Meldung wird der Kurs der Meldung zur neuen Referenz.<br>
-          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € über die Referenz gestiegen ist. Die Änderung gilt sofort.
+          Eine <b>grüne Meldung</b> erscheint, wenn der Euro-Kurs um mindestens diesen Betrag über das <b>letzte Tief</b> steigt.<br>
+          <b>Letztes Tief</b> ist der niedrigste Kurs seit dem Laden des Coins bzw. seit der letzten Meldung. Fällt der Kurs weiter, wandert das Tief mit.<br>
+          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € über dem letzten Tief liegt. Die Änderung gilt sofort.
         </span></span></span>
   </div>
   <div class="row" id="soundRow">
@@ -372,7 +396,6 @@
 
   <p class="status" id="status">Lade Kurs …</p>
   <p class="ref" id="ref"></p>
-  <div class="bar"><i id="progress"></i></div>
 </main>
 
 <aside class="ladder" aria-label="Kurs-Matrix">
@@ -483,6 +506,13 @@
     if (cur === chartCur) { liveClose = value; drawChart(); }
   }
 
+  let nextAt = 0;
+  setInterval(() => {
+    const cd = $("countdown");
+    if (!nextAt) { cd.textContent = ""; return; }
+    const s = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+    cd.textContent = s > 0 ? "nächste in " + (s >= 60 ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + " min" : s + " s") : "lädt …";
+  }, 250);
   async function update() {
     const my = gen, sym = SYM, status = $("status"), errors = [];
     const [e, u] = await Promise.all([fetchPrice(sym, "eur", errors), fetchPrice(sym, "usd", errors)]);
@@ -501,6 +531,7 @@
       status.textContent = "Für „" + sym + "“ wurde kein Kurs gefunden. Bitte das Kürzel prüfen (z. B. BTC, ETH, SOL). Neuer Versuch in " + intervalText() + ".";
     }
     $("progress").animate([{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }], { duration: INTERVAL, fill: "forwards" });
+    nextAt = Date.now() + INTERVAL;
   }
 
   /* ---------- Preis-Meldungen ---------- */
@@ -509,9 +540,24 @@
   const stepIn = $("stepIn"), dropIn = $("dropIn"), riseIn = $("riseIn");
   const userNum = el => { const v = parseFloat(el.value); return v > 0 ? v : null; };
   const stepNow = () => userNum(stepIn) || autoStep || 0;
-  const dropUSD = () => userNum(dropIn) || autoStep || Infinity;
+  const dropEUR = () => userNum(dropIn) || autoStep || Infinity;
   const riseEUR = () => userNum(riseIn) || autoStep || Infinity;
 
+  let alertMode = "both";
+  try { const m = localStorage.getItem("cryptoAlertMode"); if (["both", "rise", "fall", "off"].includes(m)) alertMode = m; } catch (e) {}
+  const fallOn = () => alertMode === "both" || alertMode === "fall";
+  const riseOn = () => alertMode === "both" || alertMode === "rise";
+  function applyAlertMode() {
+    $("alertMode").value = alertMode;
+    $("dropWrap").hidden = !fallOn(); $("riseWrap").hidden = !riseOn();
+  }
+  $("alertMode").onchange = () => {
+    alertMode = $("alertMode").value;
+    try { localStorage.setItem("cryptoAlertMode", alertMode); } catch (e) {}
+    if (baseline.hi !== undefined && last.eur !== undefined) baseline.hi = baseline.lo = last.eur;   // Zählung neu ab jetzt
+    applyAlertMode(); updateRef(); if (typeof renderSound === "function") renderSound();
+  };
+  applyAlertMode();
   function showAlert(title, text, kind) {
     const box = $("alerts"), el = document.createElement("div");
     el.className = "alert" + (kind === "rise" ? " rise" : "");
@@ -524,11 +570,16 @@
     document.title = (kind === "rise" ? "▲ " : "▼ ") + title;
   }
   function updateRef() {
-    if (baseline.eur === undefined && baseline.usd === undefined) return;
+    if (baseline.hi === undefined) return;
+    const cur = last.eur;
+    const fallAt = baseline.hi - dropEUR(), riseAt = baseline.lo + riseEUR();
+    if (alertMode === "off") { $("ref").textContent = "Meldungen: aus"; return; }
     const parts = [];
-    if (baseline.usd !== undefined) parts.push("USD −" + plain(dropUSD()) + " (Referenz " + money("usd", baseline.usd) + ")");
-    if (baseline.eur !== undefined) parts.push("EUR +" + plain(riseEUR()) + " (Referenz " + money("eur", baseline.eur) + ")");
-    $("ref").textContent = "Meldungen bei: " + parts.join(" · ");
+    if (fallOn()) parts.push("Fall ab " + plain(dropEUR()) + " € unter Hoch " + money("eur", baseline.hi) +
+      (isFinite(fallAt) ? " → bei " + money("eur", fallAt) + (cur !== undefined ? " (noch " + money("eur", Math.max(0, cur - fallAt)) + ")" : "") : ""));
+    if (riseOn()) parts.push("Anstieg ab " + plain(riseEUR()) + " € über Tief " + money("eur", baseline.lo) +
+      (isFinite(riseAt) ? " → bei " + money("eur", riseAt) + (cur !== undefined ? " (noch " + money("eur", Math.max(0, riseAt - cur)) + ")" : "") : ""));
+    $("ref").textContent = "Meldungen: " + parts.join(" · ");
   }
   /* ---------- Ton bei Anstieg ---------- */
   let audioCtx = null, soundOn = false, soundMode = "alert", lastBeep = 0;
@@ -622,7 +673,8 @@
     let info = soundNote;
     if (!info && soundOn) {
       info = soundMode === "alert"
-        ? "Ton nur bei Meldung: Anstieg ab " + (typeof riseEUR === "function" ? plain(riseEUR()) : "?") + " €, Fall ab " + (typeof dropUSD === "function" ? plain(dropUSD()) : "?") + " $."
+        ? (alertMode === "off" ? "Ton nur bei Meldung – Meldungen sind aber ausgeschaltet."
+          : "Ton nur bei Meldung: " + [riseOn() ? "Anstieg ab " + plain(riseEUR()) + " €" : "", fallOn() ? "Fall ab " + plain(dropEUR()) + " €" : ""].filter(Boolean).join(", ") + ".")
         : "Ton bei jeder Kursänderung (höchstens alle 1,2 Sekunden).";
     }
     $("soundInfo").textContent = soundOn ? info : "";
@@ -643,18 +695,20 @@
 
   function checkAlert(cur, value) {
     if (autoStep === null) { autoStep = niceStep(value); setPlaceholders(); }
-    if (baseline[cur] === undefined) baseline[cur] = value;
-    if (cur === "usd" && baseline.usd - value >= dropUSD()) {
-      showAlert(SYM + " ist um " + money("usd", baseline.usd - value) + " gefallen",
-                "Von " + money("usd", baseline.usd) + " auf " + money("usd", value), "fall");
+    if (cur !== "eur") return;                       // Meldungen werden nur im Euro-Kurs geprüft
+    if (baseline.hi === undefined) { baseline.hi = baseline.lo = value; }
+    baseline.hi = Math.max(baseline.hi, value);       // Hoch wandert mit, solange der Kurs steigt
+    baseline.lo = Math.min(baseline.lo, value);       // Tief wandert mit, solange der Kurs fällt
+    if (fallOn() && baseline.hi - value >= dropEUR()) {
+      showAlert(SYM + " ist um " + money("eur", baseline.hi - value) + " gefallen",
+                "Vom Hoch " + money("eur", baseline.hi) + " auf " + money("eur", value), "fall");
       priceSound("alert", "down");
-      baseline.usd = value;
-    }
-    if (cur === "eur" && value - baseline.eur >= riseEUR()) {
-      showAlert(SYM + " ist um " + money("eur", value - baseline.eur) + " gestiegen",
-                "Von " + money("eur", baseline.eur) + " auf " + money("eur", value), "rise");
+      baseline.hi = baseline.lo = value;              // neue Zählung ab hier
+    } else if (riseOn() && value - baseline.lo >= riseEUR()) {
+      showAlert(SYM + " ist um " + money("eur", value - baseline.lo) + " gestiegen",
+                "Vom Tief " + money("eur", baseline.lo) + " auf " + money("eur", value), "rise");
       priceSound("alert", "up");
-      baseline.eur = value;
+      baseline.hi = baseline.lo = value;
     }
     updateRef();
     if (soundOn && soundMode === "alert") renderSound();
@@ -665,6 +719,18 @@
   }
 
   /* ---------- Kurs-Matrix ---------- */
+  let ladderOn = true;
+  try { ladderOn = localStorage.getItem("cryptoLadder") !== "0"; } catch (e) {}
+  function applyLadder() {
+    document.body.classList.toggle("noladder", !ladderOn);
+    const b = $("ladderBtn"); b.textContent = "▦ Matrix: " + (ladderOn ? "An" : "Aus"); b.setAttribute("aria-pressed", String(ladderOn));
+  }
+  $("ladderBtn").onclick = () => {
+    ladderOn = !ladderOn; applyLadder();
+    try { localStorage.setItem("cryptoLadder", ladderOn ? "1" : "0"); } catch (e) {}
+    if (ladderOn) renderLadder();
+  };
+  applyLadder();
   const LADDER_STEPS = 40;
   let anchor = null;
 
