@@ -84,6 +84,9 @@
   #countdown { color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; min-width: 6.5rem; text-align: left; }
   .bar i { display: block; height: 100%; width: 100%; background: var(--btc); transform-origin: left; }
   .err { color: var(--down); }
+  .refs { margin: 0.25rem 0 0.75rem; text-align: center; }
+  .refs .ref { margin-top: 0.25rem; }
+  .refs .ref:empty { display: none; }
   .ref { margin-top: 0.625rem; color: var(--muted); font-size: .8rem; font-weight: 300; }
 
   /* Chart */
@@ -396,6 +399,7 @@
     </span>
     <span class="hint" id="soundInfo" aria-live="polite"></span>
   </div>
+  <div class="refs"><p class="ref" id="ref"></p><p class="ref" id="refTarget"></p></div>
 
   <div class="grid">
     <section class="card" aria-label="Kurs in Euro">
@@ -430,8 +434,6 @@
   </section>
 
   <p class="status" id="status">Lade Kurs …</p>
-  <p class="ref" id="ref"></p>
-  <p class="ref" id="refTarget"></p>
 </main>
 
 <aside class="ladder" aria-label="Kurs-Matrix">
