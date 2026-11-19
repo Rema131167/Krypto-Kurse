@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Crypto Live-Kurs v13</title>
+<title>Crypto Live-Kurs v18</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
@@ -131,6 +131,32 @@
   details.how p { margin-top: 0.5rem; }
 
   /* Meldungen */
+
+  /* ---------- Hinweis-Fenster (eingebettet) ---------- */
+  dialog.hw { margin: auto; width: min(40rem, calc(100% - 1.5rem)); max-height: calc(100% - 2rem); padding: 0; border: 1px solid var(--glass-border); border-radius: 1.1rem;
+    background: radial-gradient(circle at 20% 10%, var(--bg2), var(--bg1) 70%); color: var(--text); overflow: hidden; font-size: .9rem; line-height: 1.45; }
+  dialog.hw::backdrop { background: rgba(5,10,30,.65); backdrop-filter: blur(3px); }
+  dialog.hw[open] { display: flex; flex-direction: column; }
+  .hw-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: 1rem 1.1rem .6rem; }
+  .hw-head h2 { font-size: 1.2rem; }
+  .hw-btn { font: inherit; font-size: .85rem; color: var(--text); background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px; padding: .35rem .9rem; cursor: pointer; }
+  .hw-body { overflow-y: auto; padding: 0 1.1rem 1.1rem; display: grid; gap: .9rem; }
+  .hw-body h2 { font-size: .95rem; color: var(--btc); margin-bottom: .5rem; }
+  .hw-body .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 1rem; padding: .9rem 1rem; }
+  .hw-body .muted { color: var(--muted); font-size: .8rem; }
+  .hw-body table { width: 100%; border-collapse: collapse; }
+  .hw-body th, .hw-body td { text-align: left; padding: .45rem .4rem; border-bottom: 1px solid var(--glass-border); vertical-align: top; }
+  .hw-body th { color: var(--muted); font-weight: 400; font-size: .75rem; }
+  .hw-body tr.now td { background: rgba(247,147,26,.16); }
+  .hw-body tr.now td:first-child::after { content: " ● jetzt"; color: var(--btc); font-size: .72rem; font-weight: 700; }
+  .hw-body .st { font-weight: 600; }
+  .hw-body td { overflow-wrap: anywhere; }
+  @media (max-width: 480px) { .hw-body table { font-size: .8rem; } .hw-body th, .hw-body td { padding: .4rem .25rem; } }
+  .hw-body .st.open { color: var(--up); }
+  .hw-body .st.pause { color: var(--btc); }
+  .hw-body .st.closed { color: var(--muted); font-weight: 400; }
+  .liveClock .open { color: var(--up); font-weight: 600; }
+  .hw-body ul { padding-left: 1.1rem; display: grid; gap: .35rem; }
   #verTag { position: absolute; top: max(6px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); z-index: 5; font-size: .6875rem; color: var(--muted); opacity: .75; letter-spacing: .02em; pointer-events: none; }
   #alerts { position: fixed; top: 0.875rem; left: 50%; transform: translateX(-50%); z-index: 10; width: min(35rem, calc(100% - 1.5rem)); display: grid; gap: 0.625rem; }
   .alert {
@@ -197,7 +223,13 @@
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   /* v4: Kopfzeile, Fear & Greed, Live-Liquidationen */
   .headrow { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-start; justify-content: space-between; }
-  .headrow h1 { flex: 1 1 16.25rem; }
+  .headrow .titleWrap { flex: 1 1 16.25rem; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+  .hinweisBtn { font: inherit; font-size: .8rem; color: var(--muted); background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px; padding: .3rem .9rem; cursor: pointer; }
+  .hwRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem .75rem; }
+  .liveClock { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; text-align: center; }
+  .liveClock .nw { white-space: nowrap; }
+  .liveClock b { color: var(--btc); font-weight: 600; }
+  .hinweisBtn:hover { color: var(--text); border-color: var(--btc); }
   .fng { flex: 0 0 auto; margin-left: auto; min-width: 11.875rem; text-align: left; padding: 0.625rem 0.875rem 0.5625rem; border-radius: 1.25rem;
     background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(0.875rem); -webkit-backdrop-filter: blur(0.875rem); }
   .fng-t { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
@@ -235,7 +267,7 @@
   @media (max-width: 620px) {
     body { padding: 26px max(10px, env(safe-area-inset-right)) 76px max(10px, env(safe-area-inset-left)); align-items: flex-start; }
     .headrow { flex-direction: column; align-items: stretch; }
-    .headrow h1 { flex: none; }
+    .headrow .titleWrap { flex: none; }
     .fng { margin-left: 0; }
     .grid { grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: 1rem; }
     .card { padding: 1rem .5rem; border-radius: 1.2rem; }
@@ -255,7 +287,7 @@
 </style>
 </head>
 <body>
-<div id="verTag" title="Versionsstand">v13 · Update 19.11.2026</div>
+<div id="verTag" title="Versionsstand">v18 · Update 19.11.2026</div>
 <div id="sizeCtl" role="group" aria-label="Anzeigegröße">
   <button type="button" id="sizeDn" aria-label="Kleiner">A−</button>
   <button type="button" id="sizeVal" aria-label="Größe zurücksetzen">100 %</button>
@@ -268,6 +300,7 @@
 <div class="layout">
 <main>
   <div class="headrow">
+    <div class="titleWrap">
     <h1><img class="coinLogo big" alt="" hidden><span>Crypto Live-Kurs</span>
       <span class="info h1info"><button type="button" class="info-btn" aria-label="Was macht dieses Tool?" aria-describedby="tipTool">i</button>
         <span class="tip" id="tipTool" role="tooltip">
@@ -277,6 +310,8 @@
           Meldet sich mit Hinweis und auf Wunsch mit Ton, wenn der Kurs um deinen Betrag steigt oder fällt.<br>
           Die Kurse kommen von öffentlichen Börsen. Das ist keine Anlageberatung.
         </span></span></h1>
+      <div class="hwRow"><button type="button" id="hinweisBtn" class="hinweisBtn">ⓘ Hinweis: Börsen-Handelszeiten</button><span id="liveClock" class="liveClock" aria-live="off"></span></div>
+    </div>
     <aside class="fng" id="fng" aria-label="Fear-and-Greed-Index">
       <div class="fng-t">Fear &amp; Greed Index</div>
       <div class="fng-main"><span class="fng-v" id="fngV">–</span><span class="fng-l" id="fngL">Lade …</span></div>
@@ -435,6 +470,60 @@
 
   <p class="status" id="status">Lade Kurs …</p>
 </main>
+<dialog id="hinweisDlg" class="hw" aria-labelledby="hwTitle">
+  <div class="hw-head"><h2 id="hwTitle">Hinweis: Börsen-Handelszeiten <span id="hwHeadClock" class="liveClock"></span></h2><button type="button" id="hwClose" class="hw-btn">Schließen</button></div>
+  <div class="hw-body">
+  <p class="muted">Krypto wird rund um die Uhr gehandelt. Handelsvolumen und Kursbewegungen ballen sich aber zu den Geschäftszeiten der großen Finanzplätze. Alle Zeiten sind automatisch in deine Ortszeit umgerechnet, auch bei Sommer- und Winterzeit. <span id="hwClock"></span></p>
+
+  <section class="card">
+    <h2>Die drei Krypto-Sitzungen</h2>
+    <table>
+      <thead><tr><th>Sitzung</th><th>Deine Zeit</th><th>Wichtige Börsen</th></tr></thead>
+      <tbody id="hwSessions"></tbody>
+    </table>
+    <p class="muted" style="margin-top:.5rem">Feste 8-Stunden-Blöcke, wie Krypto-Datenanbieter den Tag einteilen. Das sind keine Börsenzeiten.</p>
+  </section>
+
+  <section class="card">
+    <h2>Aktienbörsen (Mo–Fr)</h2>
+    <table>
+      <thead><tr><th>Börse</th><th>Deine Zeit</th><th>Status</th></tr></thead>
+      <tbody id="hwExchanges"></tbody>
+    </table>
+    <p class="muted" style="margin-top:.5rem">Status nach regulären Handelszeiten, mit Börsenfeiertagen und verkürzten Handelstagen laut den offiziellen Börsenkalendern. Hinterlegt bis Ende 2027.</p>
+  </section>
+
+  <section class="card">
+    <h2>Die wichtigsten Zeitfenster</h2>
+    <ul>
+      <li><b>Überschneidung Europa und USA, <span data-utc="13-17"></span>:</b> die liquideste Zeit des Tages.</li>
+      <li><b>US-Börsenstart, <span id="hwUsOpen"></span>:</b> Seit den Bitcoin-ETFs bewegt die New Yorker Handelszeit den Kurs besonders stark. Wichtige US-Termine wie Inflationsdaten oder Zinsentscheide liegen meist in dieser Zeit.</li>
+      <li><b>Nachts (<span data-utc="22-6"></span>) und am Wochenende:</b> wenig Handel, breitere Spannen. Einzelne Ausreißer können dann Fehlalarme auslösen.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Die größten Börsen</h2>
+    <ul>
+      <li><b>Binance</b> ist mit rund 35–39 % des weltweiten Spot-Volumens (2026) mit Abstand die größte.</li>
+      <li>Dahinter folgen u. a. <b>Bybit, Coinbase, Gate.io, Crypto.com</b> und MEXC.</li>
+      <li>Für Bitcoin in Euro sind <b>Kraken</b> und <b>Bitstamp</b> wichtig. Von dort holt diese Seite die Kurse, mit Coinbase als Ersatz.</li>
+      <li>Asien holt auf: Der Anteil der US-Handelszeit am Volumen von BTC, ETH und SOL ist von über 55 % (Anfang 2025) auf unter 45 % gefallen.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Für die Alarme heißt das</h2>
+    <ul>
+      <li>Mit den meisten Meldungen ist im Fenster Europa und USA und kurz nach dem US-Börsenstart zu rechnen.</li>
+      <li>Nachts und am Wochenende lieber etwas größere Abstände wählen.</li>
+    </ul>
+  </section>
+
+  <p class="muted">Quellen: Velo, Coinbase Institutional, CoinGecko, FalconX, Volity und Bitget (Stand 2026). Richtwerte, keine Anlageberatung.</p>
+</div>
+</dialog>
+
 
 <aside class="ladder" aria-label="Kurs-Matrix">
   <div class="ladder-title">
@@ -797,6 +886,98 @@
     stepIn.placeholder = dropIn.placeholder = riseIn.placeholder = t;
   }
 
+  /* ---------- Hinweis-Fenster (eingebettet) ---------- */
+  (function () {
+    const dlg = $("hinweisDlg");
+    const fmt = h => { const d = new Date(); d.setUTCHours(h, 0, 0, 0); return d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }); };
+    const range = (a, b) => fmt(a) + "–" + fmt(b) + " Uhr";
+    const S = [
+      { name: "🌏 Asien", a: 0, b: 8, ex: "Binance, Bybit, OKX, Upbit (Korea)" },
+      { name: "🌍 Europa", a: 8, b: 16, ex: "Kraken, Bitstamp, Bitpanda" },
+      { name: "🌎 USA", a: 16, b: 24, ex: "Coinbase, Kraken, US-Bitcoin-ETFs" }
+    ];
+    const EX = [
+      { name: "🇯🇵 Tokio", tz: "Asia/Tokyo", hol: { "2026-11-23": ["Arbeitsdank-Tag"], "2026-12-31": ["Jahresende"], "2027-01-01": ["Neujahr"], "2027-01-11": ["Tag der Volljährigkeit"], "2027-02-11": ["Staatsgründungstag"], "2027-02-23": ["Geburtstag des Kaisers"], "2027-03-22": ["Frühlingsanfang"], "2027-04-29": ["Showa-Tag"], "2027-05-03": ["Verfassungstag"], "2027-05-04": ["Tag des Grüns"], "2027-05-05": ["Kindertag"], "2027-07-19": ["Tag des Meeres"], "2027-08-11": ["Tag der Berge"], "2027-09-20": ["Tag der Senioren"], "2027-09-23": ["Herbstanfang"], "2027-10-11": ["Sporttag"], "2027-11-03": ["Kulturtag"], "2027-11-23": ["Arbeitsdank-Tag"], "2027-12-31": ["Jahresende"], "2028-01-03": ["Neujahrspause"] }, s: [["09:00", "11:30"], ["12:30", "15:30"]] },
+      { name: "🇭🇰 Hongkong", tz: "Asia/Hong_Kong", hol: { "2026-12-24": ["Heiligabend", "12:00"], "2026-12-25": ["Weihnachten"], "2026-12-31": ["Silvester", "12:00"], "2027-01-01": ["Neujahr"], "2027-02-05": ["Vorabend Mondneujahr", "12:00"], "2027-02-08": ["Mondneujahr"], "2027-02-09": ["Mondneujahr"], "2027-03-26": ["Karfreitag"], "2027-03-29": ["Ostermontag"], "2027-04-05": ["Ching Ming"], "2027-05-13": ["Buddhas Geburtstag"], "2027-06-09": ["Drachenbootfest"], "2027-07-01": ["HKSAR-Gründungstag"], "2027-09-16": ["Tag nach Mittherbstfest"], "2027-10-01": ["Nationalfeiertag"], "2027-10-08": ["Chung Yeung"], "2027-12-24": ["Heiligabend", "12:00"], "2027-12-27": ["Weihnachten (Ersatztag)"], "2027-12-31": ["Silvester", "12:00"] }, s: [["09:30", "12:00"], ["13:00", "16:00"]] },
+      { name: "🇬🇧 London", tz: "Europe/London", hol: { "2026-12-24": ["Heiligabend", "12:30"], "2026-12-25": ["Weihnachten"], "2026-12-28": ["Boxing Day (Ersatztag)"], "2026-12-31": ["Silvester", "12:30"], "2027-01-01": ["Neujahr"], "2027-03-26": ["Karfreitag"], "2027-03-29": ["Ostermontag"], "2027-05-03": ["Bank Holiday"], "2027-05-31": ["Bank Holiday"], "2027-08-30": ["Bank Holiday"], "2027-12-24": ["Heiligabend", "12:30"], "2027-12-27": ["Weihnachten (Ersatztag)"], "2027-12-28": ["Boxing Day (Ersatztag)"], "2027-12-31": ["Silvester", "12:30"] }, s: [["08:00", "16:30"]] },
+      { name: "🇩🇪 Frankfurt (Xetra)", tz: "Europe/Berlin", hol: { "2026-12-24": ["Heiligabend"], "2026-12-25": ["1. Weihnachtstag"], "2026-12-31": ["Silvester"], "2027-01-01": ["Neujahr"], "2027-03-26": ["Karfreitag"], "2027-03-29": ["Ostermontag"], "2027-12-24": ["Heiligabend"], "2027-12-31": ["Silvester"] }, s: [["09:00", "17:30"]] },
+      { name: "🇺🇸 New York", tz: "America/New_York", hol: { "2026-11-26": ["Thanksgiving"], "2026-11-27": ["Tag nach Thanksgiving", "13:00"], "2026-12-24": ["Heiligabend", "13:00"], "2026-12-25": ["Weihnachten"], "2027-01-01": ["Neujahr"], "2027-01-18": ["Martin Luther King Day"], "2027-02-15": ["Presidents' Day"], "2027-03-26": ["Karfreitag"], "2027-05-31": ["Memorial Day"], "2027-06-18": ["Juneteenth"], "2027-07-05": ["Unabhängigkeitstag"], "2027-09-06": ["Labor Day"], "2027-11-25": ["Thanksgiving"], "2027-11-26": ["Tag nach Thanksgiving", "13:00"], "2027-12-24": ["Weihnachten"] }, s: [["09:30", "16:00"]] }
+    ];
+    const mins = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+    function inTz(tz, now) {                            // Wochentag und Minuten des Tages in der Börsen-Zeitzone
+      const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+        .formatToParts(now).map(x => [x.type, x.value]));
+      const ds = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);   // JJJJ-MM-TT
+      return { wd: p.weekday, m: +p.hour * 60 + +p.minute, ds };
+    }
+    function toLocal(tz, t, now) {                      // Börsen-Uhrzeit → deine Ortszeit
+      const there = new Date(now.toLocaleString("en-US", { timeZone: tz })), diff = now - there;
+      const d = new Date(there); const [h, m] = t.split(":").map(Number); d.setHours(h, m, 0, 0);
+      return new Date(d.getTime() + diff).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    }
+    // Börsenfeiertage (offizielle Kalender, hinterlegt bis Ende 2027). [Name] = ganztägig zu, [Name, "HH:MM"] = verkürzter Handel bis HH:MM Ortszeit
+    function sessionsOn(e, ds) {
+      const h = e.hol[ds];
+      if (!h) return { s: e.s };
+      if (h.length < 2) return { s: [], name: h[0] };
+      const c = mins(h[1]);
+      return { s: e.s.filter(([a]) => mins(a) < c).map(([a, b]) => [a, mins(b) > c ? h[1] : b]), name: h[0], early: h[1] };
+    }
+    function nextHoliday(e, now) {
+      const today = inTz(e.tz, now).ds, k = Object.keys(e.hol).filter(d => d >= today).sort()[0];
+      if (!k) return "";
+      const [y, mo, d] = k.split("-"), h = e.hol[k];
+      return (k === today ? "heute: " : "nächster Feiertag: " + d + "." + mo + ". ") + h[0] + (h[1] ? " (verkürzt bis " + toLocal(e.tz, h[1], now) + " Uhr)" : "");
+    }
+    function exStatus(e, now) {
+      const { wd, m, ds } = inTz(e.tz, now);
+      if (wd === "Sat" || wd === "Sun") return ["closed", "geschlossen (Wochenende)"];
+      const day = sessionsOn(e, ds);
+      if (!day.s.length) return ["closed", "geschlossen (Feiertag: " + day.name + ")"];
+      e = Object.assign({}, e, { s: day.s });
+      const first = mins(e.s[0][0]), last = mins(e.s[e.s.length - 1][1]);
+      if (e.s.some(([a, b]) => m >= mins(a) && m < mins(b))) {
+        const end = e.s.find(([a, b]) => m >= mins(a) && m < mins(b))[1];
+        return ["open", "offen bis " + toLocal(e.tz, end, now) + (day.early ? " (verkürzt: " + day.name + ")" : "")];
+      }
+      if (m >= first && m < last) return ["pause", "Mittagspause"];
+      if (m < first) return ["closed", "geschlossen, öffnet " + toLocal(e.tz, e.s[0][0], now) + (day.early ? " (verkürzt bis " + toLocal(e.tz, day.early, now) + ")" : "")];
+      return ["closed", "geschlossen" + (day.early ? " (früher Schluss: " + day.name + ")" : "")];
+    }
+    function render() {
+      const now = new Date(), h = now.getUTCHours();
+      $("hwExchanges").innerHTML = EX.map(e => {
+        const [cls, txt] = exStatus(e, now);
+        const times = e.s.length > 1 ? toLocal(e.tz, e.s[0][0], now) + "–" + toLocal(e.tz, e.s[e.s.length - 1][1], now) + " Uhr<br><span class=\"muted\">Pause " + toLocal(e.tz, e.s[0][1], now) + "–" + toLocal(e.tz, e.s[1][0], now) + "</span>"
+                                     : toLocal(e.tz, e.s[0][0], now) + "–" + toLocal(e.tz, e.s[0][1], now) + " Uhr";
+        const nh = nextHoliday(e, now);
+        return '<tr class="' + (cls === "open" ? "now" : "") + '"><td>' + e.name + "</td><td>" + times + '</td><td><span class="st ' + cls + '">' + txt + "</span>" +
+          (nh ? '<br><span class="muted">' + nh + "</span>" : "") + "</td></tr>";
+      }).join("");
+      $("hwSessions").innerHTML = S.map(s => '<tr class="' + (h >= s.a && h < s.b ? "now" : "") + '"><td>' + s.name + "</td><td>" + range(s.a, s.b % 24) + "</td><td>" + s.ex + "</td></tr>").join("");
+      dlg.querySelectorAll("[data-utc]").forEach(el => { const [a, b] = el.dataset.utc.split("-").map(Number); el.textContent = range(a, b); });
+      const ny = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" })), diff = now - ny;   // US-Börse öffnet 9:30 New Yorker Zeit
+      const open = new Date(ny); open.setHours(9, 30, 0, 0);
+      $("hwUsOpen").textContent = new Date(open.getTime() + diff).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr";
+      $("hwClock").textContent = "Jetzt: " + now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr.";
+    }
+    function tick() {
+      if (dlg.open && new Date().getSeconds() === 0) render();
+      const now = new Date(), h = now.getUTCHours(), s = S.find(x => h >= x.a && h < x.b);
+      const t = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const label = s.name.replace(/^\S+\s/, "");
+      const ny = exStatus(EX[4], now), fra = exStatus(EX[3], now);
+      const st = (n, x) => n + " " + (x[0] === "open" ? '<span class="open">offen</span>' : x[0] === "pause" ? "Pause" : "zu");
+      $("liveClock").innerHTML = '<span class="nw">🕒 ' + t + " Uhr · <b>" + label + '</b> aktiv</span> <span class="nw">· ' + st("Frankfurt", fra) + " · " + st("New York", ny) + "</span>";
+      $("hwHeadClock").textContent = "· " + t + " Uhr";
+    }
+    tick(); setInterval(tick, 1000);
+    let timer = null;
+    $("hinweisBtn").onclick = () => { render(); dlg.showModal(); timer = setInterval(render, 30000); };
+    $("hwClose").onclick = () => dlg.close();
+    dlg.addEventListener("close", () => clearInterval(timer));
+    dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });   // Klick neben das Fenster schließt
+  })();
   /* ---------- Kurs-Matrix ---------- */
   let ladderOn = true;
   try { ladderOn = localStorage.getItem("cryptoLadder") !== "0"; } catch (e) {}
