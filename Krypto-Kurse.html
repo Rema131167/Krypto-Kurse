@@ -331,7 +331,7 @@
         <span class="tip" id="tipStep" role="tooltip">
           <b>Matrix-Schritt</b><br>
           Abstand zwischen zwei Zeilen der Kurs-Matrix, in der Währung bei „Eingaben in“.<br>
-          <b>Leer lassen:</b> Die Seite wählt den Schritt automatisch passend zum Kurs (der Wert steht im Feld als „auto").<br>
+          <b>„auto“ (Feld leer):</b> etwa 0,5 % des aktuellen Kurses, gerundet auf eine runde Zahl (1, 2, 5, 10, 20, 50 …). Dadurch liegt der Wert meist zwischen 0,3 % und 0,7 %. Beispiel BTC bei 75.000 €: 375 € → <b>500 €</b>. Der Wert steht in Klammern im Feld und gilt gemeinsam für Matrix-Schritt, Meldung Fall und Meldung Anstieg.<br>
           <b>Zahl eintragen:</b> Die Matrix springt sofort auf diese Stufen. Beispiel: <b>100</b> ergibt Zeilen in 100er-Schritten. Die Matrix zeigt immer 40 Stufen nach oben und unten, ein kleiner Schritt zeigt also einen engeren Bereich um den Kurs.
         </span></span></span>
     <span><label for="alertMode">Meldungen</label>
@@ -347,7 +347,8 @@
           <b>Meldung bei Fall</b><br>
           Eine <b>rote Meldung</b> erscheint, wenn der Kurs um mindestens diesen Betrag unter das <b>letzte Hoch</b> fällt.<br>
           <b>Letztes Hoch</b> ist der höchste Kurs seit dem Laden des Coins bzw. seit der letzten Meldung. Steigt der Kurs weiter, wandert das Hoch mit.<br>
-          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € (bzw. $) unter dem letzten Hoch liegt. Die Änderung gilt sofort.
+          <b>„auto“ (Feld leer):</b> etwa 0,5 % des aktuellen Kurses, gerundet auf eine runde Zahl (1, 2, 5, 10, 20, 50 …). Dadurch liegt der Wert meist zwischen 0,3 % und 0,7 %. Beispiel BTC bei 75.000 €: 375 € → <b>500 €</b>. Der Wert steht in Klammern im Feld und gilt gemeinsam für Matrix-Schritt, Meldung Fall und Meldung Anstieg.<br>
+          <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € (bzw. $) unter dem letzten Hoch liegt. Die Änderung gilt sofort.
         </span></span></span>
     <span id="riseWrap"><label for="riseIn">Meldung Anstieg (<span class="curLbl">EUR</span>)</label> <input id="riseIn" class="sel num" type="number" min="0" step="any" placeholder="auto">
       <span class="info"><button type="button" class="info-btn" aria-label="Hilfe zu Meldung Anstieg" aria-describedby="tipRise">i</button>
@@ -355,7 +356,8 @@
           <b>Meldung bei Anstieg</b><br>
           Eine <b>grüne Meldung</b> erscheint, wenn der Kurs um mindestens diesen Betrag über das <b>letzte Tief</b> steigt.<br>
           <b>Letztes Tief</b> ist der niedrigste Kurs seit dem Laden des Coins bzw. seit der letzten Meldung. Fällt der Kurs weiter, wandert das Tief mit.<br>
-          <b>Leer lassen:</b> automatischer Wert. <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € (bzw. $) über dem letzten Tief liegt. Die Änderung gilt sofort.
+          <b>„auto“ (Feld leer):</b> etwa 0,5 % des aktuellen Kurses, gerundet auf eine runde Zahl (1, 2, 5, 10, 20, 50 …). Dadurch liegt der Wert meist zwischen 0,3 % und 0,7 %. Beispiel BTC bei 75.000 €: 375 € → <b>500 €</b>. Der Wert steht in Klammern im Feld und gilt gemeinsam für Matrix-Schritt, Meldung Fall und Meldung Anstieg.<br>
+          <b>Beispiel:</b> Bei <b>50</b> kommt die Meldung, sobald der Kurs 50 € (bzw. $) über dem letzten Tief liegt. Die Änderung gilt sofort.
         </span></span></span>
   </div>
   <div class="row" id="targetRow">
